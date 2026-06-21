@@ -191,3 +191,46 @@ public:
         return new DesktopDevice(*this);
     }
 };
+
+class Connection
+{
+private:
+    Device *connectedWith;
+    int startOfConnection;
+    // controls mem for device ans connection can be created only from class Server
+    // meaning -> private copy constructor + par constructor and mark class Server as a friend :)
+    Connection(const Device &connectedDevice, const int start) : startOfConnection(start)
+    {
+        this->connectedWith = connectedDevice.clone();
+    }
+
+    void free()
+    {
+        delete[] connectedWith;
+    }
+
+public:
+    // Copy constructor
+    Connection(const Connection &other) : startOfConnection(other.startOfConnection)
+    {
+        this->connectedWith = other.connectedWith;
+        // we have operator = defined for EVERY device
+    }
+    // Operator =
+    Connection &operator=(Connection &other)
+    {
+        if (this != &other)
+        {
+            Device *tempObj = other.connectedWith->clone();
+            tempObj = this->connectedWith;
+            this->connectedWith = other.connectedWith;
+            other.connectedWith = tempObj;
+        }
+        return *this;
+    }
+
+    void setStartOfConnection(const int newStartOfConnection)
+    {
+        this->startOfConnection = newStartOfConnection;
+    }
+};
