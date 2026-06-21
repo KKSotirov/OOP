@@ -35,15 +35,18 @@ private:
     }
 
 protected:
-    void copyPar(const char *src, char *dest)
+    void copyPar(const char *src, char *&dest)
     {
         if (src != nullptr)
+        {
+            dest = new char[strlen(src) + 1];
             strcpy(dest, src);
+        }
         else
             dest = nullptr;
     }
 
-    void setterHelper(const char *dest, const char *src)
+    void setterHelper(char *&dest, const char *src)
     {
         char *temp = src ? new char[strlen(src) + 1] : nullptr;
         if (src != nullptr)
@@ -65,6 +68,11 @@ public:
     Device(const char *newName) : name(nullptr), id(++counter)
     {
         copyPar(newName, this->name);
+    }
+    // Copy constr
+    Device(const Device &other) : id(++counter), name(nullptr)
+    {
+        copyPar(other.name, this->name);
     }
     // Operator =
     Device &operator=(const Device &other) = delete;
@@ -91,6 +99,9 @@ public:
     virtual void printSpecificInfo() const = 0;
     virtual Device *clone() const = 0;
 };
+
+// Задължителна инициализация на статичния брояч
+int Device::counter = 0;
 
 class MobileDevice : public Device
 {
@@ -197,6 +208,7 @@ class Connection
 private:
     Device *connectedWith;
     int startOfConnection;
+    friend class Server;
     // controls mem for device ans connection can be created only from class Server
     // meaning -> private copy constructor + par constructor and mark class Server as a friend :)
     Connection(const Device &connectedDevice, const int start) : startOfConnection(start)
@@ -204,31 +216,33 @@ private:
         this->connectedWith = connectedDevice.clone();
     }
 
-    void free()
-    {
-        delete[] connectedWith;
-    }
-
-public:
     // Copy constructor
     Connection(const Connection &other) : startOfConnection(other.startOfConnection)
     {
-        this->connectedWith = other.connectedWith;
+        if (other.connectedWith != nullptr)
+            this->connectedWith = other.connectedWith->clone();
         // we have operator = defined for EVERY device
     }
+
+    void free()
+    {
+        delete connectedWith;
+    }
+
+public:
     // Operator =
     Connection &operator=(Connection &other)
     {
         if (this != &other)
         {
-            Device *tempObj = other.connectedWith->clone();
-            tempObj = this->connectedWith;
-            this->connectedWith = other.connectedWith;
-            other.connectedWith = tempObj;
+            Device *tempObj = other.connectedWith ? other.connectedWith->clone() : nullptr;
+            free();
+            this->connectedWith = tempObj;
+            this->startOfConnection = other.startOfConnection;
         }
         return *this;
     }
-
+    // GETTERS + SETTERS
     void setStartOfConnection(const int newStartOfConnection)
     {
         this->startOfConnection = newStartOfConnection;
@@ -236,5 +250,58 @@ public:
     int getStartOfConnection() const
     {
         return this->startOfConnection;
+    }
+
+    ~Connection()
+    {
+        free();
+    }
+};
+
+class Server
+{
+private:
+    Connection **connections;
+    size_t timeout = 0;
+    size_t count;
+    size_t capacity;
+
+    void resize()
+    {
+        capacity *= 2;
+        Connection **tempConnections = new Connection *[capacity];
+        for (size_t i = 0; i < count; i++)
+        {
+            tempConnections[i] = this->connections[i];
+        }
+        delete[] this->connections;
+        this->connections = tempConnections;
+    }
+
+    void free()
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            delete this->connections[i];
+        }
+        delete[] this->connections;
+    }
+
+public:
+    Server(unsigned newCapacity, unsigned newTime) : capacity(newCapacity), timeout(newTime)
+    {
+        this->connections = new Connection *[capacity];
+    }
+
+    bool connect(const Device &d)
+    {
+        if (this->count >= capacity)
+            resize();
+        this->connections[count] = new Connection(d, 0); // we can use the private param constructor because server is a friend class
+        return true;
+    }
+
+    ~Server()
+    {
     }
 };
