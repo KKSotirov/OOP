@@ -44,6 +44,15 @@ protected:
         std::swap(this->policyType, other.policyType);
     }
 
+    void setterHelper(const char *src, const char *dest)
+    {
+        char *temp = src ? new char[strlen(src) + 1] : nullptr;
+        if (src != nullptr)
+            strcpy(temp, src);
+        delete[] dest;
+        dest = temp;
+    }
+
 public:
     // Dyn Mem ==> RO3
     // Default constructor
@@ -58,12 +67,8 @@ public:
     {
         copyPar(other.productDescription);
     }
-    // Operator = with copy and swap
-    Policy &operator=(Policy other)
-    {
-        this->swap(other);
-        return *this;
-    }
+
+    Policy &operator=(const Policy &other) = delete;
     // Virtual Destructor
     virtual ~Policy()
     {
@@ -77,13 +82,7 @@ public:
     }
     void setProductDescription(const char *newDescription)
     {
-        char *temp = newDescription ? new char[strlen(newDescription) + 1] : nullptr;
-        if (newDescription != nullptr)
-        {
-            strcpy(temp, newDescription);
-        }
-        delete[] this->productDescription;
-        productDescription = temp;
+        setterHelper(newDescription, this->productDescription);
     }
     const double getEnsuranceCost() const
     {
@@ -140,7 +139,6 @@ protected:
     {
         char *tempBr = nullptr;
         char *tempWay = nullptr;
-
         try
         {
             if (br != nullptr)
@@ -176,6 +174,33 @@ protected:
         std::swap(this->path, other.path);
     }
 
+    void setterHelperTuples(const char *src1, const char *dest1, const char *src2, const char *dest2)
+    {
+        char *dest1Copy = dest1 ? new char[strlen(dest1) + 1] : nullptr;
+        if (dest1 != nullptr)
+            strcpy(dest1Copy, dest1);
+
+        try
+        {
+            setterHelper(src1, dest1);
+            try
+            {
+                setterHelper(src2, dest2);
+            }
+            catch (...)
+            {
+                setterHelper(dest1Copy, dest1);
+                delete[] dest1Copy;
+                throw;
+            }
+        }
+        catch (...)
+        {
+            delete[] dest1Copy;
+            throw;
+        }
+    }
+
 public:
     // Dyn Mem ==> RO3
     // Default constructor
@@ -209,11 +234,7 @@ public:
     }
     void setBrand(const char *newBrand)
     {
-        char *temp = newBrand ? new char[strlen(newBrand) + 1] : nullptr;
-        if (temp != nullptr)
-            strcpy(temp, newBrand);
-        delete[] this->carBrand;
-        this->carBrand = temp;
+        setterHelper(newBrand, this->carBrand);
     }
     const double getCargoWeight() const
     {
@@ -237,11 +258,7 @@ public:
     }
     void setPathway(const char *newPathway)
     {
-        char *temp = newPathway ? new char[strlen(newPathway) + 1] : nullptr;
-        if (newPathway != nullptr)
-            strcpy(temp, newPathway);
-        delete[] this->path;
-        path = temp;
+        setterHelper(newPathway, this->path);
     }
 
     // Virtual functions
@@ -438,12 +455,7 @@ public:
     }
     void setTechnologyType(const char *newTechnologyType)
     {
-        // Strong Safety exception
-        char *temp = newTechnologyType ? new char[strlen(newTechnologyType) + 1] : nullptr;
-        if (newTechnologyType != nullptr)
-            strcpy(temp, newTechnologyType);
-        delete[] this->technologyType;
-        this->technologyType = temp;
+        setterHelper(newTechnologyType, this->technologyType);
     }
     // Virtual functions
     double paidSum() const override
@@ -550,13 +562,43 @@ private:
     size_t capacity;
     double availableFunds; // Пази парите на компанията
 
-    void free() { /* твоят код */ }
-    void copyFrom(const BullFMI &other) { /* твоят код с фикса за other.count */ }
-    void resize() { /* твоят код */ }
+    void free()
+    {
+        for (size_t i = 0; i < count; ++i)
+        {
+            delete policies[i]; // Трием всеки полиморфен обект
+        }
+        delete[] policies; // Трием масива от указатели
+    }
+
+    void copyFrom(const BullFMI &other)
+    {
+        this->capacity = other.capacity;
+        this->count = other.count;
+        this->availableFunds = other.availableFunds;
+
+        this->policies = new Policy *[this->capacity];
+        for (size_t i = 0; i < this->count; ++i)
+        {
+            this->policies[i] = other.policies[i]->clone(); // Дълбоко копиране чрез Prototype Pattern
+        }
+    }
+
+    void resize()
+    {
+        this->capacity *= 2;
+        Policy **temp = new Policy *[this->capacity];
+        for (size_t i = 0; i < this->count; ++i)
+        {
+            temp[i] = this->policies[i]; // Прехвърляме указателите
+        }
+        delete[] this->policies; // Трием стария масив (но НЕ и обектите, към които сочат указателите!)
+        this->policies = temp;
+    }
 
 public:
     // 1. Конструктори и Деструктор (Задължителни!)
-    BullFMI() : policies(new Policy *[4]), count(0), capacity(4), availableFunds(10000.0) {} // Примерни начални пари
+    BullFMI() : policies(new Policy *[3]), count(0), capacity(4), availableFunds(10000.0) {} // Примерни начални пари
 
     BullFMI(const BullFMI &other)
     {
@@ -632,3 +674,42 @@ public:
         }
     }
 };
+
+int main()
+{
+    //// Полица за карго автомобил (тегло 4.5 тона <= 5 тона -> paidSum() трябва да върне 4.5)
+    // CargoCarPolicy cargoPol("Volvo", 4.5, 12.0, "Sofia-Burgas",
+    //                         "Cargo Insurance", 500.0, 500.0, EnsuranseType::CARGO_CAR);
+    CargoCarPolicy carPol("Volvo", 3.0, 10.0, "Sofia~>Bali~>Paris~>Sofia",
+                          "Car Insurance", 40000, 10000, EnsuranseType::CARGO_CAR);
+
+    PropertyFirePolicy propertyPol(1000000, 200, 1934, true,
+                                   "Property Insurance", 700000, 300000, EnsuranseType::PROPERTY_FIRE);
+
+    ElectronicEquipmentPolicy electronicPol("Kalashnikov", 1953, 3000,
+                                            "Equipment Policy", 2500, 1500, EnsuranseType::ELECTRONIC_EQUIPMENT);
+
+    PropertyAndEquipmentPolicy mixedPol(71, 3000000,
+                                        "Iphone 1", 2005, 10000,
+                                        "Mixed Insurance", 10000, 7000, EnsuranseType::PROPERTY_AND_EQUIPMENT,
+                                        750000, 100, 2010, false);
+
+    BullFMI pimp;
+    pimp.addPolicy(carPol);
+    pimp.addPolicy(propertyPol);
+    pimp.addPolicy(electronicPol);
+    std::cout << "Successfully added 3 policies to BullFMI" << std::endl;
+    // adding a fourth policy -> expecting automatic resize
+    pimp.addPolicy(mixedPol);
+    std::cout << "Successfully resized BullFMI and added a fourth policy " << std::endl;
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+    std::cout << "Printing all policies: " << std::endl;
+    pimp.printAll();
+    pimp.removePolicy(0);
+    pimp.removePolicy(2);
+    std::cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << std::endl;
+    std::cout << "Printing all policies after removing previous policies at indexes 0 and 2" << std::endl;
+    pimp.printAll();
+
+    return 0;
+}
