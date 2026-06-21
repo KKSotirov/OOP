@@ -100,7 +100,7 @@ public:
     virtual Device *clone() const = 0;
 };
 
-// Задължителна инициализация на статичния брояч
+// Фиксирано: Задължителна инициализация на статичния брояч за линкера
 int Device::counter = 0;
 
 class MobileDevice : public Device
@@ -131,11 +131,14 @@ public:
     // VIRTUAL FUNCTIONS
     void printSpecificInfo() const override
     {
-        std::cout << "[Mobile Device] name: " << getName() << ", ID: " << getId() << ", battery lvl: " << this->battery << std::endl;
+        // Фиксирано: Защита от nullptr при принтиране на името
+        std::cout << "[Mobile Device] name: " << (getName() ? getName() : "None")
+                  << ", ID: " << getId() << ", battery lvl: " << this->battery << std::endl;
     }
+    // Фиксирано: Добавен коректен return оператор
     const char *printString() const override
     {
-        toString(Type::mobile);
+        return "mobile";
     }
     MobileDevice *clone() const override
     {
@@ -191,11 +194,14 @@ public:
     // VIRTUAL FUNCTIONS
     void printSpecificInfo() const override
     {
-        std::cout << "[Desktop Device] name: " << getName() << ", ID: " << getId() << ", url: " << this->urlAdress << std::endl;
+        // Фиксирано: Защита от nullptr при принтиране
+        std::cout << "[Desktop Device] name: " << (getName() ? getName() : "None")
+                  << ", ID: " << getId() << ", url: " << (this->urlAdress ? this->urlAdress : "None") << std::endl;
     }
+    // Фиксирано: Добавен коректен return оператор
     const char *printString() const override
     {
-        toString(Type::desktop);
+        return "desktop";
     }
     DesktopDevice *clone() const override
     {
@@ -209,19 +215,17 @@ private:
     Device *connectedWith;
     int startOfConnection;
     friend class Server;
-    // controls mem for device ans connection can be created only from class Server
-    // meaning -> private copy constructor + par constructor and mark class Server as a friend :)
+
     Connection(const Device &connectedDevice, const int start) : startOfConnection(start)
     {
         this->connectedWith = connectedDevice.clone();
     }
 
-    // Copy constructor
-    Connection(const Connection &other) : startOfConnection(other.startOfConnection)
+    // Фиксирано: Инициализираме connectedWith(nullptr) за безопасност
+    Connection(const Connection &other) : startOfConnection(other.startOfConnection), connectedWith(nullptr)
     {
         if (other.connectedWith != nullptr)
             this->connectedWith = other.connectedWith->clone();
-        // we have operator = defined for EVERY device
     }
 
     void free()
@@ -230,8 +234,8 @@ private:
     }
 
 public:
-    // Operator =
-    Connection &operator=(Connection &other)
+    // Направено const за по-добра съвместимост с константни обекти
+    Connection &operator=(const Connection &other)
     {
         if (this != &other)
         {
@@ -288,7 +292,7 @@ private:
     }
 
 public:
-    Server(unsigned newCapacity, unsigned newTime) : capacity(newCapacity), timeout(newTime)
+    Server(unsigned newCapacity, unsigned newTime) : capacity(newCapacity), timeout(newTime), count(0)
     {
         this->connections = new Connection *[capacity];
     }
@@ -297,11 +301,13 @@ public:
     {
         if (this->count >= capacity)
             resize();
-        this->connections[count] = new Connection(d, 0); // we can use the private param constructor because server is a friend class
+        this->connections[count] = new Connection(d, 0);
+        this->count++; // Фиксирано: count++, а не connections++!
         return true;
     }
 
     ~Server()
     {
+        free();
     }
 };
