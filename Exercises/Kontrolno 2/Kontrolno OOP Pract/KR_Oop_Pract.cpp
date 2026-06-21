@@ -233,4 +233,8 @@ public:
     {
         this->startOfConnection = newStartOfConnection;
     }
+    int getStartOfConnection() const
+    {
+        return this->startOfConnection;
+    }
 };
