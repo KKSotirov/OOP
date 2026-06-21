@@ -2,10 +2,9 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <utility>
 
-// ==========================================
-// 1. UTILS & HELPER FUNCTIONS
-// ==========================================
+// --- Помощни функции за обработка на низове ---
 inline bool isSpace(char c)
 {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c == '\v';
@@ -27,7 +26,6 @@ inline std::string trim(const std::string &s)
     return s.substr(a, b - a);
 }
 
-// Ръчно разделяне на команди по интервали (замяна на забранения <sstream>)
 inline std::vector<std::string> splitSpaces(const std::string &str)
 {
     std::vector<std::string> tokens;
@@ -54,9 +52,7 @@ inline std::vector<std::string> splitSpaces(const std::string &str)
     return tokens;
 }
 
-// ==========================================
-// 2. DATA STRUCTURES & STATS
-// ==========================================
+// --- Структури за грешки и статистика ---
 struct ParseError
 {
     int line_number = 0;
@@ -76,7 +72,6 @@ struct DocumentStats
     int strike = 0;
 };
 
-// Помощен клас за пагинация на екрана (Максимум 24 реда)
 class TreePrinter
 {
 private:
@@ -98,9 +93,7 @@ public:
     }
 };
 
-// ==========================================
-// 3. INLINE NODES HIERARCHY
-// ==========================================
+// --- Йерархия на Inline елементите (Вътрешни стилове) ---
 class InlineNode
 {
 public:
@@ -111,7 +104,6 @@ public:
     virtual void collectStats(DocumentStats &stats) const = 0;
 };
 
-// Контейнер за поддръжка на поредици от вложени стилове
 class InlineSequence
 {
 private:
@@ -135,36 +127,21 @@ private:
 
 public:
     InlineSequence() = default;
-    ~InlineSequence() { clear(); }
+
+    ~InlineSequence()
+    {
+        clear();
+    }
 
     InlineSequence(const InlineSequence &other)
     {
         copyFrom(other);
     }
 
-    // Сигурна имплементация със Strong Exception Guarantee (Copy-and-Swap)
-    InlineSequence &operator=(const InlineSequence &other)
+    // Идиом Copy-and-Swap за силна гаранция за изключения
+    InlineSequence &operator=(InlineSequence other)
     {
-        if (this != &other)
-        {
-            std::vector<InlineNode *> tempParts;
-            tempParts.reserve(other.parts.size());
-            try
-            {
-                for (auto *node : other.parts)
-                {
-                    tempParts.push_back(node ? node->clone() : nullptr);
-                }
-            }
-            catch (...)
-            {
-                for (auto *node : tempParts)
-                    delete node;
-                throw;
-            }
-            clear();
-            parts = tempParts;
-        }
+        std::swap(parts, other.parts);
         return *this;
     }
 
@@ -298,13 +275,10 @@ public:
     }
 };
 
-// ==========================================
-// 4. PARSERS (INLINE PARSER)
-// ==========================================
+// --- Парсер за вътрешни стилове (Коректна Markdown семантика) ---
 class InlineParser
 {
 public:
-    // Коректно търсене на маркери без счупване на вложени стилове (Проблем №2 Фикснат)
     static InlineSequence parse(const std::string &text, int line_num, std::vector<ParseError> &errors)
     {
         InlineSequence seq;
@@ -314,7 +288,7 @@ public:
 
         while (i < n)
         {
-            // ИТАЛИК: съвпадение на "**"
+            // БОЛД: съвпадение на "**" според стандартния Markdown спецификатор
             if (i + 1 < n && text[i] == '*' && text[i + 1] == '*')
             {
                 if (!current_text.empty())
@@ -336,17 +310,17 @@ public:
                 if (close != std::string::npos)
                 {
                     std::string inner = text.substr(i + 2, close - (i + 2));
-                    seq.add(new ItalicNode(parse(inner, line_num, errors)));
+                    seq.add(new BoldNode(parse(inner, line_num, errors)));
                     i = close + 2;
                 }
                 else
                 {
-                    errors.push_back({line_num, "Незатворен блок за италик (**)"});
+                    errors.push_back({line_num, "Незатворен блок за болд (**)"});
                     current_text += "**";
                     i += 2;
                 }
             }
-            // БОЛД: съвпадение на единична звезда "*" (без да засича двойна)
+            // ИТАЛИК: съвпадение на единична звезда "*" (пропускайки болд двойки)
             else if (text[i] == '*')
             {
                 if (!current_text.empty())
@@ -360,7 +334,7 @@ public:
                 {
                     if (j + 1 < n && text[j] == '*' && text[j + 1] == '*')
                     {
-                        j += 2; // Пропускаме италик маркери, търсим само единична звезда
+                        j += 2;
                     }
                     else if (text[j] == '*')
                     {
@@ -375,17 +349,17 @@ public:
                 if (close != std::string::npos)
                 {
                     std::string inner = text.substr(i + 1, close - (i + 1));
-                    seq.add(new BoldNode(parse(inner, line_num, errors)));
+                    seq.add(new ItalicNode(parse(inner, line_num, errors)));
                     i = close + 1;
                 }
                 else
                 {
-                    errors.push_back({line_num, "Незатворен блок за болд (*)"});
+                    errors.push_back({line_num, "Незатворен блок за италик (*)"});
                     current_text += "*";
                     i += 1;
                 }
             }
-            // КОД: съвпадение на "`"
+            // КОД СТИЛ: "`"
             else if (text[i] == '`')
             {
                 if (!current_text.empty())
@@ -407,7 +381,7 @@ public:
                     i += 1;
                 }
             }
-            // ЗАЧЕРКНАТ TEXT: съвпадение на "~"
+            // ЗАЧЕРКНАТ TEXT: "~"
             else if (text[i] == '~')
             {
                 if (!current_text.empty())
@@ -444,13 +418,12 @@ public:
     }
 };
 
-// ==========================================
-// 5. BLOCK STRUCTURES HIERARCHY
-// ==========================================
+// --- Йерархия на Структурните блокове ---
 class Block
 {
 public:
     virtual ~Block() = default;
+    virtual Block *clone() const = 0; // Задължителен за дълбоко копиране на документа
     virtual std::string toHTML() const = 0;
     virtual void printTree(int depth, TreePrinter &p) const = 0;
     virtual void collectStats(DocumentStats &stats) const = 0;
@@ -464,16 +437,20 @@ private:
 
 public:
     HeadingBlock(int lvl, const InlineSequence &seq) : level(lvl), content(seq) {}
+    Block *clone() const override { return new HeadingBlock(*this); }
+
     std::string toHTML() const override
     {
         std::string lvlStr = std::to_string(level);
         return "<h" + lvlStr + ">" + content.toHTML() + "</h" + lvlStr + ">\n";
     }
+
     void printTree(int depth, TreePrinter &p) const override
     {
         p.print(std::string(depth, ' ') + "Heading " + std::to_string(level) + ":");
         content.printTree(depth + 2, p);
     }
+
     void collectStats(DocumentStats &stats) const override
     {
         if (level == 1)
@@ -499,15 +476,19 @@ private:
 
 public:
     ParagraphBlock(const InlineSequence &seq) : content(seq) {}
+    Block *clone() const override { return new ParagraphBlock(*this); }
+
     std::string toHTML() const override
     {
         return "<p>" + content.toHTML() + "</p>\n";
     }
+
     void printTree(int depth, TreePrinter &p) const override
     {
         p.print(std::string(depth, ' ') + "Paragraph:");
         content.printTree(depth + 2, p);
     }
+
     void collectStats(DocumentStats &stats) const override
     {
         stats.paragraphs++;
@@ -518,6 +499,7 @@ public:
 class HRBlock : public Block
 {
 public:
+    Block *clone() const override { return new HRBlock(*this); }
     std::string toHTML() const override { return "<hr />\n"; }
     void printTree(int depth, TreePrinter &p) const override
     {
@@ -534,6 +516,7 @@ private:
 
 public:
     ListBlock(bool ord) : ordered(ord) {}
+    Block *clone() const override { return new ListBlock(*this); }
     bool isOrdered() const { return ordered; }
     void addItem(const InlineSequence &seq) { items.push_back(seq); }
 
@@ -548,6 +531,7 @@ public:
         res += "</" + tag + ">\n";
         return res;
     }
+
     void printTree(int depth, TreePrinter &p) const override
     {
         p.print(std::string(depth, ' ') + (ordered ? "Ordered List:" : "Unordered List:"));
@@ -557,6 +541,7 @@ public:
             item.printTree(depth + 4, p);
         }
     }
+
     void collectStats(DocumentStats &stats) const override
     {
         stats.list_items += items.size();
@@ -567,9 +552,7 @@ public:
     }
 };
 
-// ==========================================
-// 6. DOCUMENT MANAGER (MARKDOWN DOCUMENT)
-// ==========================================
+// --- Документ Мениджър (Вече съобразен с Правилото на трите) ---
 class MarkdownDocument
 {
 private:
@@ -585,10 +568,6 @@ private:
         return s.substr(a);
     }
 
-public:
-    MarkdownDocument() = default;
-    ~MarkdownDocument() { clear(); }
-
     void clear()
     {
         for (auto *b : blocks)
@@ -598,7 +577,39 @@ public:
         total_lines_read = 0;
     }
 
-    // Имплементация на BlockParser логиката, интегрирана напълно без ранен trim (Проблеми №1 и №3 Фикснати)
+    void copyFrom(const MarkdownDocument &other)
+    {
+        blocks.reserve(other.blocks.size());
+        for (auto *b : other.blocks)
+        {
+            blocks.push_back(b ? b->clone() : nullptr);
+        }
+        errors = other.errors;
+        total_lines_read = other.total_lines_read;
+    }
+
+public:
+    MarkdownDocument() = default;
+
+    ~MarkdownDocument()
+    {
+        clear();
+    }
+
+    MarkdownDocument(const MarkdownDocument &other)
+    {
+        copyFrom(other);
+    }
+
+    // Идиом Copy-and-Swap за пълна Exception Safety при управлението на ресурсния вектор
+    MarkdownDocument &operator=(MarkdownDocument other)
+    {
+        std::swap(blocks, other.blocks);
+        std::swap(errors, other.errors);
+        std::swap(total_lines_read, other.total_lines_read);
+        return *this;
+    }
+
     bool parseFromFile(const std::string &filename)
     {
         clear();
@@ -609,111 +620,82 @@ public:
         std::string line;
         ListBlock *current_list = nullptr;
 
-        while (std::getline(in, line))
+        try
         {
-            total_lines_read++;
-            if (!line.empty() && line.back() == '\r')
+            while (std::getline(in, line))
             {
-                line.pop_back();
-            }
-
-            // Ръчна валидация за изцяло празен ред
-            bool is_empty = true;
-            for (char c : line)
-            {
-                if (!isSpace(c))
+                total_lines_read++;
+                if (!line.empty() && line.back() == '\r')
                 {
-                    is_empty = false;
-                    break;
+                    line.pop_back();
                 }
-            }
 
-            // Проблем №1: Празните редове затварят списъка, но НЕ генерират излишни параграфи
-            if (is_empty)
-            {
-                if (current_list)
+                bool is_empty = true;
+                for (char c : line)
                 {
-                    blocks.push_back(current_list);
-                    current_list = nullptr;
+                    if (!isSpace(c))
+                    {
+                        is_empty = false;
+                        break;
+                    }
                 }
-                continue;
-            }
 
-            // Изрязваме само отляво, за да запазим структурни празни дефиниции отдясно като "- " (Проблем №3)
-            std::string lead_trimmed = ltrim(line);
-
-            // 1. Хоризонтална линия
-            if (lead_trimmed == "---")
-            {
-                if (current_list)
-                {
-                    blocks.push_back(current_list);
-                    current_list = nullptr;
-                }
-                blocks.push_back(new HRBlock());
-                continue;
-            }
-
-            // 2. Заглавия (Heading)
-            if (lead_trimmed[0] == '#')
-            {
-                size_t h_count = 0;
-                while (h_count < lead_trimmed.size() && lead_trimmed[h_count] == '#')
-                {
-                    h_count++;
-                }
-                if (h_count <= 6 && h_count < lead_trimmed.size() && isSpace(lead_trimmed[h_count]))
+                if (is_empty)
                 {
                     if (current_list)
                     {
                         blocks.push_back(current_list);
                         current_list = nullptr;
                     }
-                    std::string content = trim(lead_trimmed.substr(h_count));
-                    blocks.push_back(new HeadingBlock(h_count, InlineParser::parse(content, total_lines_read, errors)));
                     continue;
                 }
-                else if (h_count > 6)
-                {
-                    errors.push_back({total_lines_read, "Прекалено дълбоко ниво на заглавието (над h6)"});
-                }
-            }
 
-            // 3. Неподреден Списък
-            if ((lead_trimmed[0] == '-' || lead_trimmed[0] == '*') && lead_trimmed.size() > 1 && isSpace(lead_trimmed[1]))
-            {
-                std::string content = trim(lead_trimmed.substr(2));
-                InlineSequence item_seq = InlineParser::parse(content, total_lines_read, errors);
+                std::string lead_trimmed = ltrim(line);
 
-                if (current_list && !current_list->isOrdered())
-                {
-                    current_list->addItem(item_seq);
-                }
-                else
+                // 1. Хоризонтална линия
+                if (lead_trimmed == "---")
                 {
                     if (current_list)
+                    {
                         blocks.push_back(current_list);
-                    current_list = new ListBlock(false);
-                    current_list->addItem(item_seq);
+                        current_list = nullptr;
+                    }
+                    blocks.push_back(new HRBlock());
+                    continue;
                 }
-                continue;
-            }
 
-            // 4. Подреден Списък
-            size_t dig_count = 0;
-            while (dig_count < lead_trimmed.size() && isDigit(lead_trimmed[dig_count]))
-            {
-                dig_count++;
-            }
-            if (dig_count > 0 && dig_count < lead_trimmed.size() && lead_trimmed[dig_count] == '.')
-            {
-                size_t next_idx = dig_count + 1;
-                if (next_idx < lead_trimmed.size() && isSpace(lead_trimmed[next_idx]))
+                // 2. Заглавия (Heading)
+                if (lead_trimmed[0] == '#')
                 {
-                    std::string content = trim(lead_trimmed.substr(next_idx));
+                    size_t h_count = 0;
+                    while (h_count < lead_trimmed.size() && lead_trimmed[h_count] == '#')
+                    {
+                        h_count++;
+                    }
+                    if (h_count <= 6 && h_count < lead_trimmed.size() && isSpace(lead_trimmed[h_count]))
+                    {
+                        if (current_list)
+                        {
+                            blocks.push_back(current_list);
+                            current_list = nullptr;
+                        }
+                        std::string content = trim(lead_trimmed.substr(h_count));
+                        blocks.push_back(new HeadingBlock(h_count, InlineParser::parse(content, total_lines_read, errors)));
+                        continue;
+                    }
+                    else if (h_count > 6)
+                    {
+                        errors.push_back({total_lines_read, "Прекалено дълбоко ниво на заглавието (над h6)"});
+                    }
+                }
+
+                // 3. Неподреден Списък
+                if ((lead_trimmed[0] == '-' || lead_trimmed[0] == '*') && lead_trimmed.size() > 1 && isSpace(lead_trimmed[1]))
+                {
+                    std::string content = trim(lead_trimmed.substr(2));
                     InlineSequence item_seq = InlineParser::parse(content, total_lines_read, errors);
 
-                    if (current_list && current_list->isOrdered())
+                    if (current_list && !current_list->isOrdered())
                     {
                         current_list->addItem(item_seq);
                     }
@@ -721,27 +703,62 @@ public:
                     {
                         if (current_list)
                             blocks.push_back(current_list);
-                        current_list = new ListBlock(true);
+                        current_list = new ListBlock(false);
                         current_list->addItem(item_seq);
                     }
                     continue;
                 }
+
+                // 4. Подреден Списък
+                size_t dig_count = 0;
+                while (dig_count < lead_trimmed.size() && isDigit(lead_trimmed[dig_count]))
+                {
+                    dig_count++;
+                }
+                if (dig_count > 0 && dig_count < lead_trimmed.size() && lead_trimmed[dig_count] == '.')
+                {
+                    size_t next_idx = dig_count + 1;
+                    if (next_idx < lead_trimmed.size() && isSpace(lead_trimmed[next_idx]))
+                    {
+                        std::string content = trim(lead_trimmed.substr(next_idx));
+                        InlineSequence item_seq = InlineParser::parse(content, total_lines_read, errors);
+
+                        if (current_list && current_list->isOrdered())
+                        {
+                            current_list->addItem(item_seq);
+                        }
+                        else
+                        {
+                            if (current_list)
+                                blocks.push_back(current_list);
+                            current_list = new ListBlock(true);
+                            current_list->addItem(item_seq);
+                        }
+                        continue;
+                    }
+                }
+
+                // 5. По подразбиране: Обикновен Параграф
+                if (current_list)
+                {
+                    blocks.push_back(current_list);
+                    current_list = nullptr;
+                }
+                std::string content = trim(lead_trimmed);
+                blocks.push_back(new ParagraphBlock(InlineParser::parse(content, total_lines_read, errors)));
             }
 
-            // 5. По подразбиране: Обикновен Параграф
             if (current_list)
             {
                 blocks.push_back(current_list);
                 current_list = nullptr;
             }
-            std::string content = trim(lead_trimmed);
-            blocks.push_back(new ParagraphBlock(InlineParser::parse(content, total_lines_read, errors)));
         }
-
-        // Изтласкване на последно отворен списък
-        if (current_list)
+        catch (...)
         {
-            blocks.push_back(current_list);
+            delete current_list;
+            clear();
+            throw; // Препредаваме изключението след почистване на динамичната памет
         }
 
         in.close();
@@ -798,8 +815,8 @@ public:
         std::cout << "  Параграфи: " << stats.paragraphs << "\n";
         std::cout << "  Хоризонтални линии (HR): " << stats.hr << "\n";
         std::cout << "  Елементи на списъци (LI): " << stats.list_items << "\n";
-        std::cout << "  Използвани стилове:\n";
-        std::cout << "    Bold (*): " << stats.bold << " | Italic (**): " << stats.italic
+        std::cout << "  Използвани вътрешни стилове:\n";
+        std::cout << "    Bold (**): " << stats.bold << " | Italic (*): " << stats.italic
                   << " | Code (`): " << stats.code << " | Strike (~): " << stats.strike << "\n";
     }
 
@@ -815,9 +832,7 @@ public:
     }
 };
 
-// ==========================================
-// 7. COMMAND LINE INTERFACE (CLI)
-// ==========================================
+// --- Потребителски Интерфейс (CLI) ---
 class CommandLineInterface
 {
 private:
@@ -877,14 +892,14 @@ public:
                     choice = trim(choice);
                     if (choice != "y" && choice != "Y")
                     {
-                        std::cout << "Преводът е дублиран/отказан от потребителя.\n";
+                        std::cout << "Операцията е отказана от потребителя.\n";
                         continue;
                     }
                 }
 
                 if (doc.saveToHTML(outfile))
                 {
-                    std::cout << "Готово! HTML файлът е успешно генериран: " << outfile << "\n";
+                    std::cout << "Успешно генериран HTML файл: " << outfile << "\n";
                 }
                 else
                 {
@@ -941,9 +956,6 @@ public:
     }
 };
 
-// ==========================================
-// 8. ENTRY POINT
-// ==========================================
 int main()
 {
     CommandLineInterface cli;
