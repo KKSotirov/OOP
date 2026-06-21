@@ -1,6 +1,9 @@
 #include <iostream>
 #include <cstring>
 #include <utility>
+#include <stdexcept>
+
+const size_t POLICIES_CAP = 200;
 
 enum class EnsuranseType
 {
@@ -27,13 +30,10 @@ private:
 protected:
     void copyPar(const char *otherDesc)
     {
-        if (otherDesc == nullptr)
-        {
-            this->productDescription = nullptr;
-            return;
-        }
-        this->productDescription = new char[strlen(otherDesc) + 1];
-        strcpy(this->productDescription, otherDesc);
+
+        this->productDescription = otherDesc ? new char[strlen(otherDesc) + 1] : nullptr;
+        if (otherDesc != nullptr)
+            strcpy(this->productDescription, otherDesc);
     }
 
     void swap(Policy &other) noexcept
@@ -47,7 +47,7 @@ protected:
 public:
     // Dyn Mem ==> RO3
     // Default constructor
-    Policy() : productDescription(nullptr), ensuranceCost(0), paidAmount(0), policyType() {}
+    Policy() : productDescription(nullptr), ensuranceCost(0.0), paidAmount(0.0), policyType() {}
     // Param constructor
     Policy(const char *productDescr, const double ensurance, const double paid, const EnsuranseType type) : ensuranceCost(ensurance), paidAmount(paid), policyType(type)
     {
@@ -111,8 +111,13 @@ public:
     }
 
     // VIRTUAL FUNCTIONS
-    virtual void print() const = 0;
-    virtual const double paidSum() const = 0;
+    virtual void print() const
+    {
+        std::cout << "Description: " << (productDescription ? productDescription : "None")
+                  << ", Insurance Cost: " << ensuranceCost
+                  << ", Paid Amount: " << paidAmount;
+    }
+    virtual double paidSum() const = 0;
     virtual Policy *clone() const = 0;
 };
 
@@ -181,7 +186,7 @@ public:
         copyObj(brand, way);
     }
     // Copy constructor
-    CargoCarPolicy(const CargoCarPolicy &other) : Policy(other)
+    CargoCarPolicy(const CargoCarPolicy &other) : Policy(other), carBrand(nullptr), path(nullptr)
     {
         copyObj(other.carBrand, other.path);
     }
@@ -242,9 +247,13 @@ public:
     // Virtual functions
     void print() const override
     {
-        // std::cout << "Specific data for policy" << std::endl;
+        Policy::print();
+        std::cout << " -> CargoCar [ Brand: " << (carBrand ? carBrand : "None")
+                  << ", Value/Weight: " << cargoWeight
+                  << ", MaxWeight: " << maxWeight
+                  << ", Path: " << (path ? path : "None") << " ]\n";
     }
-    double const paidSum() const override
+    double paidSum() const override
     {
         if (cargoWeight <= 5)
             return cargoWeight;
@@ -264,12 +273,26 @@ private:
     int yearBuild;
     bool hasFireSystem;
 
+protected:
+    void swapOwnData(PropertyFirePolicy &other) noexcept
+    {
+        std::swap(this->propertyCost, other.propertyCost);
+        std::swap(this->area, other.area);
+        std::swap(this->yearBuild, other.yearBuild);
+        std::swap(this->hasFireSystem, other.hasFireSystem);
+    }
+
 public:
     // No dyn mem ==> no ro3
     // Default constructor
     PropertyFirePolicy() : Policy(), propertyCost(0), area(0), yearBuild(0), hasFireSystem(false) {}
     // Par constructor
-    PropertyFirePolicy(const double propertyCostPar, const double areaPar, const int yearBuildPar, const bool hasFireSystemPar) : propertyCost(propertyCostPar), area(areaPar), yearBuild(yearBuildPar), hasFireSystem(hasFireSystemPar) {}
+    PropertyFirePolicy(double newPropertyCost, double newArea, int newYear, bool newHasFireSystem,
+                       const char *descr, double cost, double paid, EnsuranseType type)
+        : Policy(descr, cost, paid, type), // Вика се, ако правим САМО PropertyFirePolicy
+          propertyCost(newPropertyCost), area(newArea), yearBuild(newYear), hasFireSystem(newHasFireSystem)
+    {
+    }
 
     // GETTERS + SETTERS
     const double getPropertyCost() const
@@ -306,12 +329,26 @@ public:
     }
 
     // VIRTUAL FUNCTIONS
-    void print() const
+    void print() const override
     {
+        Policy::print();
+        std::cout << " -> PropertyFire [ Cost: " << propertyCost
+                  << ", Area: " << area
+                  << ", Built: " << yearBuild
+                  << ", Fire System: " << (hasFireSystem ? "Yes" : "No") << " ]\n";
     }
-    const double paidSum() const override
+
+    double paidSum() const override
     {
-        // if else chain
+        // Пресмятане спрямо текущата година на изпита (2026)
+        int age = 2026 - yearBuild;
+        if (hasFireSystem)
+        {
+            if (age <= 25)
+                return propertyCost;    // 100%
+            return 0.75 * propertyCost; // 75%
+        }
+        return 0.50 * propertyCost; // 50%
     }
     PropertyFirePolicy *clone() const override
     {
@@ -326,15 +363,90 @@ private:
     int yearBuild;
     double technoValue;
 
+    void free()
+    {
+        delete[] technologyType;
+    }
+
+protected:
+    void copyPar(const char *technoType)
+    {
+        if (technoType == nullptr)
+        {
+            this->technologyType = nullptr;
+            return;
+        }
+        this->technologyType = new char[strlen(technoType) + 1];
+        strcpy(this->technologyType, technoType);
+    }
+    void swapOwnData(ElectronicEquipmentPolicy &other) noexcept
+    {
+        std::swap(this->technologyType, other.technologyType);
+        std::swap(this->yearBuild, other.yearBuild);
+        std::swap(this->technoValue, other.technoValue);
+    }
+    void swap(ElectronicEquipmentPolicy &other) noexcept
+    {
+        this->Policy::swap(other);
+        swapOwnData(other);
+    }
+
 public:
     // DYN MEM ==> BIG 5
     // Default constructor
     ElectronicEquipmentPolicy() : Policy(), technologyType(nullptr), yearBuild(0), technoValue(0) {}
-    // Par constructor
-    // ElectronicEquipmentPolicy () {}
-
+    // Par Constructor
+    ElectronicEquipmentPolicy(const char *newTechnologyType, const int newYearBuild, const double newTechnoValue, const char *productDescr, const double insuranceCost, const double paid, const EnsuranseType type) : Policy(productDescr, insuranceCost, paid, type), yearBuild(newYearBuild), technoValue(newTechnoValue)
+    {
+        copyPar(newTechnologyType);
+    }
+    // Copy Constructor
+    ElectronicEquipmentPolicy(const ElectronicEquipmentPolicy &other) : Policy(other), yearBuild(other.yearBuild), technoValue(other.technoValue)
+    {
+        copyPar(other.technologyType);
+    }
+    // Operator =
+    ElectronicEquipmentPolicy &operator=(ElectronicEquipmentPolicy other)
+    {
+        this->swap(other);
+        return *this;
+    }
+    ~ElectronicEquipmentPolicy()
+    {
+        free();
+    }
+    // GETTERS + SETTERS
+    const int getYearBuild() const
+    {
+        return this->yearBuild;
+    }
+    void setYearBuild(const int newYearBuild)
+    {
+        this->yearBuild = newYearBuild;
+    }
+    const double getTechnoValue() const
+    {
+        return this->technoValue;
+    }
+    void setTechnoValue(const double newTechnoValue)
+    {
+        this->technoValue = newTechnoValue;
+    }
+    const char *getTechnologyType() const
+    {
+        return this->technologyType;
+    }
+    void setTechnologyType(const char *newTechnologyType)
+    {
+        // Strong Safety exception
+        char *temp = newTechnologyType ? new char[strlen(newTechnologyType) + 1] : nullptr;
+        if (newTechnologyType != nullptr)
+            strcpy(temp, newTechnologyType);
+        delete[] this->technologyType;
+        this->technologyType = temp;
+    }
     // Virtual functions
-    const double paidSum() const override
+    double paidSum() const override
     {
         return technoValue;
     }
@@ -344,5 +456,179 @@ public:
     }
     void print() const override
     {
+        Policy::print();
+        std::cout << " -> ElectronicEquipment [ Tech Type: " << (technologyType ? technologyType : "None")
+                  << ", Manufactured: " << yearBuild
+                  << ", Value: " << technoValue << " ]" << std::endl;
+    }
+};
+
+class PropertyAndEquipmentPolicy : public PropertyFirePolicy, public ElectronicEquipmentPolicy
+{
+private:
+    int combinedRisk;
+    double combinedAmountStocks;
+
+protected:
+    void swap(PropertyAndEquipmentPolicy &other) noexcept
+    {
+        this->Policy::swap(other);
+        this->PropertyFirePolicy::swapOwnData(other);
+        this->ElectronicEquipmentPolicy::swapOwnData(other);
+        std::swap(this->combinedRisk, other.combinedRisk);
+        std::swap(this->combinedAmountStocks, other.combinedAmountStocks);
+    }
+
+public:
+    // NO DYN MEMORY
+    // Default Constructor
+    PropertyAndEquipmentPolicy() : PropertyFirePolicy(), ElectronicEquipmentPolicy(), combinedRisk(0), combinedAmountStocks(0) {}
+    // Paramaterized constructor
+    PropertyAndEquipmentPolicy(const int newCombinedRisk, const double newCombinedAmountStocks,
+                               const char *newTechnologyType, const int newYearBuild, const double newTechnoValue,
+                               const char *productDescr, const double ensuranceCost, const double paid, const EnsuranseType type,
+                               const double propertyCostPar, const double areaPar, const int yearBuildPar, const bool hasFireSystemPar) : Policy(productDescr, ensuranceCost, paid, type), ElectronicEquipmentPolicy(newTechnologyType, newYearBuild, newTechnoValue, productDescr, ensuranceCost, paid, type), PropertyFirePolicy(propertyCostPar, areaPar, yearBuildPar, hasFireSystemPar, productDescr, ensuranceCost, paid, type),
+                                                                                                                                          combinedRisk(newCombinedRisk), combinedAmountStocks(newCombinedAmountStocks) {}
+
+    // Copy constructor
+    PropertyAndEquipmentPolicy(const PropertyAndEquipmentPolicy &other)
+        : Policy(other), PropertyFirePolicy(other), ElectronicEquipmentPolicy(other), combinedRisk(other.combinedRisk), combinedAmountStocks(other.combinedAmountStocks) {}
+    // Operator =
+    PropertyAndEquipmentPolicy &operator=(PropertyAndEquipmentPolicy other)
+    {
+        this->swap(other);
+        return *this;
+    }
+    // Destructor
+    ~PropertyAndEquipmentPolicy() = default;
+    // GETTERS + SETTERS
+    void setCombinedRisk(const int newCombinedRisk)
+    {
+        if (newCombinedRisk >= 0 && newCombinedRisk <= 100)
+            this->combinedRisk = newCombinedRisk;
+        else
+        {
+            throw std::invalid_argument("Invalid percentage value!");
+        }
+    }
+    const int getCombinedRisk() const
+    {
+        return this->combinedRisk;
+    }
+    void setCombinedAmountStocks(const double newCombinedAmountStocks)
+    {
+        this->combinedAmountStocks = newCombinedAmountStocks;
+    }
+    const double getCombinedAmountStocks() const
+    {
+        return this->combinedAmountStocks;
+    }
+
+    // VIRTUAL FUNCTIONS
+    double paidSum() const override
+    {
+        return (combinedRisk / 100.0) * combinedAmountStocks;
+    }
+
+    PropertyAndEquipmentPolicy *clone() const override
+    {
+        return new PropertyAndEquipmentPolicy(*this);
+    }
+    void print() const override
+    {
+        Policy::print();
+        std::cout << " -> Combined Policy [ Combined Risk: " << combinedRisk << "%"
+                  << ", Combined Assets Value: " << combinedAmountStocks << " ]" << std::endl;
+    }
+};
+
+class BullFMI
+{
+private:
+    Policy **policies;
+    size_t count;
+    size_t capacity;
+    double availableFunds; // Пази парите на компанията
+
+    void free() { /* твоят код */ }
+    void copyFrom(const BullFMI &other) { /* твоят код с фикса за other.count */ }
+    void resize() { /* твоят код */ }
+
+public:
+    // 1. Конструктори и Деструктор (Задължителни!)
+    BullFMI() : policies(new Policy *[4]), count(0), capacity(4), availableFunds(10000.0) {} // Примерни начални пари
+
+    BullFMI(const BullFMI &other)
+    {
+        copyFrom(other);
+    }
+
+    BullFMI &operator=(BullFMI other)
+    {
+        // Можеш да си напишеш бърз swap метод за BullFMI и да ползваш copy-and-swap
+        std::swap(this->policies, other.policies);
+        std::swap(this->count, other.count);
+        std::swap(this->capacity, other.capacity);
+        std::swap(this->availableFunds, other.availableFunds);
+        return *this;
+    }
+
+    ~BullFMI()
+    {
+        free();
+    }
+
+    // 2. Бизнес логика (Премести addPolicy и removePolicy в public секцията!)
+    void addPolicy(const Policy &newPol)
+    {
+        // ТУК трябва да добавиш проверка дали парите на компанията стигат за покриване
+        // Ако сумата (ensuranceCost) надхвърля availableFunds, може да хвърлиш изключение
+
+        if (this->count >= capacity)
+            resize();
+
+        policies[count] = newPol.clone();
+        count++;
+    }
+
+    void removePolicy(size_t index)
+    {
+        if (index >= count)
+        {
+            throw std::out_of_range("Invalid index");
+        }
+        delete policies[index];
+        for (size_t i = index; i < (count - 1); ++i)
+        {
+            this->policies[i] = this->policies[i + 1];
+        }
+        count--;
+    }
+
+    // 3. Други задължителни методи (обикновено изисквани в това задание)
+    void printAll() const
+    {
+        std::cout << "Company Funds: " << availableFunds << "\n";
+        for (size_t i = 0; i < count; ++i)
+        {
+            policies[i]->print(); // Полиморфно извикване
+        }
+    }
+
+    // Метод за изплащане на застраховка при събитие
+    void executeClaim(size_t index)
+    {
+        if (index >= count)
+            return;
+        double payout = policies[index]->paidSum(); // Смята колко трябва да се плати
+        if (availableFunds >= payout)
+        {
+            availableFunds -= payout;
+            std::cout << "Paid " << payout << " for policy at index " << index << "\n";
+        }
+        else
+        {
+            std::cout << "Bankrupt! Insufficient funds to execute claim.\n";
+        }
     }
 };
