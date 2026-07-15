@@ -8,3 +8,7 @@
 
 # По избор: Ако не искаш да качваш локалните си настройки на VS Code
 .vscode/
+
+.cursor/
+.cursorrules
+.vscode/

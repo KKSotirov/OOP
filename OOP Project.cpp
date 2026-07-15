@@ -2,7 +2,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include <utility>
+// ПОПРАВКА 1: Премахнат <utility> — забранен от условието.
+//             std::swap() заменен с vector::swap() и ръчна размяна за int.
 
 // ==========================================
 // 1. ПОМОЩНИ УТИЛИТИ ЗА ОБРАБОТКА НА СТРИНГОВЕ
@@ -31,7 +32,7 @@ inline std::string trim(const std::string &s)
 inline std::vector<std::string> splitSpaces(const std::string &str)
 {
     std::vector<std::string> tokens;
-    std::string current = "";
+    std::string current;
     for (char c : str)
     {
         if (isSpace(c))
@@ -39,7 +40,7 @@ inline std::vector<std::string> splitSpaces(const std::string &str)
             if (!current.empty())
             {
                 tokens.push_back(current);
-                current = "";
+                current.clear();
             }
         }
         else
@@ -138,7 +139,8 @@ public:
 
     InlineSequence &operator=(InlineSequence other)
     {
-        std::swap(parts, other.parts);
+        // ПОПРАВКА 1 (продължение): vector::swap() е член-функция — не изисква <utility>
+        parts.swap(other.parts);
         return *this;
     }
 
@@ -150,7 +152,7 @@ public:
 
     std::string toHTML() const
     {
-        std::string res = "";
+        std::string res;
         for (auto *node : parts)
             if (node)
                 res += node->toHTML();
@@ -185,7 +187,7 @@ public:
     {
         p.print(std::string(depth, ' ') + "Text: \"" + text + "\"");
     }
-    void collectStats(DocumentStats &stats) const override {}
+    void collectStats(DocumentStats &) const override {}
 };
 
 class BoldNode : public InlineNode
@@ -238,7 +240,10 @@ private:
 public:
     CodeNode(const InlineSequence &seq) : content(seq) {}
     InlineNode *clone() const override { return new CodeNode(content); }
-    std::string toHTML() const override { return "<code>" + content.toHTML() + "</code>"; }
+
+    // ПОПРАВКА 4: Условието изисква <code> <text> </code> — с интервали
+    std::string toHTML() const override { return "<code> " + content.toHTML() + " </code>"; }
+
     void printTree(int depth, TreePrinter &p) const override
     {
         p.print(std::string(depth, ' ') + "Code span (`):");
@@ -285,6 +290,24 @@ public:
     virtual bool isLeaf() const { return false; }
 };
 
+// ПОПРАВКА 5: Ново правило за *** — трябва да се регистрира ПРЕДИ ** и *,
+//             иначе ** мачва първо и оставя паразитен * накрая на стринга.
+//             ***text*** -> <i><b>text</b></i>
+class BoldItalicRule : public InlineRule
+{
+public:
+    std::string getDelimiter() const override { return "***"; }
+    std::string getError() const override { return "Незатворен маркер за болд+италик (***)"; }
+    InlineNode *createNode(const InlineSequence &inner) const override
+    {
+        // Вътрешното съдържание се обвива в BoldNode, а той — в ItalicNode
+        InlineNode *boldNode = new BoldNode(inner);
+        InlineSequence italicSeq;
+        italicSeq.add(boldNode);
+        return new ItalicNode(italicSeq);
+    }
+};
+
 class ItalicRule : public InlineRule
 {
 public:
@@ -325,6 +348,9 @@ private:
 
     InlineParser()
     {
+        // ПОПРАВКА 5 (продължение): BoldItalicRule е ПЪРВО — проверява за ***
+        //             преди ItalicRule да вземе ** и преди BoldRule да вземе *
+        rules.push_back(new BoldItalicRule());
         rules.push_back(new ItalicRule());
         rules.push_back(new BoldRule());
         rules.push_back(new CodeRule());
@@ -345,7 +371,7 @@ public:
         InlineSequence seq;
         size_t i = 0;
         size_t n = text.size();
-        std::string current_text = "";
+        std::string current_text;
 
         while (i < n)
         {
@@ -365,7 +391,7 @@ public:
                 if (!current_text.empty())
                 {
                     seq.add(new TextNode(current_text));
-                    current_text = "";
+                    current_text.clear();
                 }
 
                 std::string delim = matchedRule->getDelimiter();
@@ -431,9 +457,10 @@ public:
     HeadingBlock(int lvl, const InlineSequence &seq) : level(lvl), content(seq) {}
     Block *clone() const override { return new HeadingBlock(*this); }
 
+    // ПОПРАВКА 4 (продължение): Условието изисква <h1> <formattedText> </h1> — с интервали
     std::string toHTML() const override
     {
-        return "<h" + std::to_string(level) + ">" + content.toHTML() + "</h" + std::to_string(level) + ">\n";
+        return "<h" + std::to_string(level) + "> " + content.toHTML() + " </h" + std::to_string(level) + ">\n";
     }
 
     void printTree(int depth, TreePrinter &p) const override
@@ -444,7 +471,6 @@ public:
 
     void collectStats(DocumentStats &stats) const override
     {
-        // КРАЙ НА IF-ELSE: Директно добавяме стойността в масива според нивото
         stats.headings[level]++;
         content.collectStats(stats);
     }
@@ -459,9 +485,11 @@ public:
     ParagraphBlock(const InlineSequence &seq) : content(seq) {}
     Block *clone() const override { return new ParagraphBlock(*this); }
 
+    // ПОПРАВКА 4 (продължение): Условието изисква <p> <formattedText> </p> — с интервали
+    //             Пример от условието: Test -> <p> Test </p>
     std::string toHTML() const override
     {
-        return "<p>" + content.toHTML() + "</p>\n";
+        return "<p> " + content.toHTML() + " </p>\n";
     }
 
     void printTree(int depth, TreePrinter &p) const override
@@ -481,8 +509,14 @@ class HRBlock : public Block
 {
 public:
     Block *clone() const override { return new HRBlock(*this); }
-    std::string toHTML() const override { return "<hr />\n"; }
-    void printTree(int depth, TreePrinter &p) const override { p.print(std::string(depth, ' ') + "Horizontal Rule (HR)"); }
+
+    // ПОПРАВКА 3: Условието изисква <hr></hr>, не <hr />
+    std::string toHTML() const override { return "<hr></hr>\n"; }
+
+    void printTree(int depth, TreePrinter &p) const override
+    {
+        p.print(std::string(depth, ' ') + "Horizontal Rule (HR)");
+    }
     void collectStats(DocumentStats &stats) const override { stats.hr++; }
 };
 
@@ -498,13 +532,14 @@ public:
     bool isOrdered() const { return ordered; }
     void addItem(const InlineSequence &seq) { items.push_back(seq); }
 
+    // ПОПРАВКА 4 (продължение): Условието изисква <li> <formattedText> </li> — с интервали
     std::string toHTML() const override
     {
         std::string tag = ordered ? "ol" : "ul";
         std::string res = "<" + tag + ">\n";
         for (const auto &item : items)
         {
-            res += "  <li>" + item.toHTML() + "</li>\n";
+            res += "  <li> " + item.toHTML() + " </li>\n";
         }
         res += "</" + tag + ">\n";
         return res;
@@ -522,7 +557,7 @@ public:
 
     void collectStats(DocumentStats &stats) const override
     {
-        stats.list_items += items.size();
+        stats.list_items += static_cast<int>(items.size());
         for (const auto &item : items)
         {
             item.collectStats(stats);
@@ -537,15 +572,22 @@ class BlockParserRule
 {
 public:
     virtual ~BlockParserRule() = default;
-    virtual bool tryParse(const std::string &line, int line_num, std::vector<Block *> &blocks, std::vector<ParseError> &errors, ListBlock *&current_list) = 0;
+    virtual bool tryParse(const std::string &line, int line_num,
+                          std::vector<Block *> &blocks,
+                          std::vector<ParseError> &errors,
+                          ListBlock *&current_list) = 0;
 };
 
 class HRRule : public BlockParserRule
 {
 public:
-    bool tryParse(const std::string &line, int line_num, std::vector<Block *> &blocks, std::vector<ParseError> &, ListBlock *&current_list) override
+    bool tryParse(const std::string &line, int line_num,
+                  std::vector<Block *> &blocks,
+                  std::vector<ParseError> &,
+                  ListBlock *&current_list) override
     {
-        if (line != "---")
+        // ПОПРАВКА 2: Условието изисква точно "- - -" (с интервали), не "---"
+        if (line != "- - -")
             return false;
         if (current_list)
         {
@@ -560,7 +602,10 @@ public:
 class HeadingRule : public BlockParserRule
 {
 public:
-    bool tryParse(const std::string &line, int line_num, std::vector<Block *> &blocks, std::vector<ParseError> &errors, ListBlock *&current_list) override
+    bool tryParse(const std::string &line, int line_num,
+                  std::vector<Block *> &blocks,
+                  std::vector<ParseError> &errors,
+                  ListBlock *&current_list) override
     {
         if (line.empty() || line[0] != '#')
             return false;
@@ -594,7 +639,10 @@ public:
 class ListItemRule : public BlockParserRule
 {
 public:
-    bool tryParse(const std::string &line, int line_num, std::vector<Block *> &blocks, std::vector<ParseError> &errors, ListBlock *&current_list) override
+    bool tryParse(const std::string &line, int line_num,
+                  std::vector<Block *> &blocks,
+                  std::vector<ParseError> &errors,
+                  ListBlock *&current_list) override
     {
         bool is_unordered = (line.size() >= 2 && (line[0] == '-' || line[0] == '*') && line[1] == ' ');
         bool is_ordered = false;
@@ -676,6 +724,7 @@ private:
 
 public:
     MarkdownDocument() { initializeRules(); }
+
     ~MarkdownDocument()
     {
         clear();
@@ -690,26 +739,39 @@ public:
 
     MarkdownDocument &operator=(MarkdownDocument other)
     {
-        std::swap(blocks, other.blocks);
-        std::swap(errors, other.errors);
-        std::swap(total_lines_read, other.total_lines_read);
+        // ПОПРАВКА 1 (продължение): vector::swap() вместо std::swap() — не изисква <utility>
+        blocks.swap(other.blocks);
+        errors.swap(other.errors);
+        // За int правим ръчна размяна — без <utility>
+        int tmp = total_lines_read;
+        total_lines_read = other.total_lines_read;
+        other.total_lines_read = tmp;
         return *this;
     }
 
-    // КРАЙ НА IF-ELSE ВЕРИГИТЕ: Използваме чист полиморфизъм за редовете
     bool parseFromFile(const std::string &filename)
     {
+        // ПОПРАВКА 7 (минорна): clear() е преместен преди проверката за отваряне,
+        //                       за да не връщаме данни от предишен успешен parse
+        //                       при неуспешно отваряне на нов файл.
+        clear();
+
         std::ifstream in(filename);
         if (!in.is_open())
             return false;
 
-        clear();
         std::string line;
         ListBlock *current_list = nullptr;
 
         while (std::getline(in, line))
         {
+            // ПОПРАВКА 6: Маха \r от края на реда при Windows line endings (\r\n).
+            //             std::getline маха \n, но \r остава и чупи сравненията.
+            if (!line.empty() && line[line.size() - 1] == '\r')
+                line.erase(line.size() - 1);
+
             total_lines_read++;
+
             bool is_empty = true;
             for (char c : line)
             {
@@ -732,7 +794,6 @@ public:
             std::string lead_trimmed = trim(line);
             bool matched = false;
 
-            // Изпълнение на Pattern Matching веригата от правила
             for (auto *rule : blockRules)
             {
                 if (rule->tryParse(lead_trimmed, total_lines_read, blocks, errors, current_list))
@@ -742,7 +803,6 @@ public:
                 }
             }
 
-            // Ако нито едно правило не е мачнало, по подразбиране е свободен параграф
             if (!matched)
             {
                 if (current_list)
@@ -754,6 +814,7 @@ public:
                 blocks.push_back(new ParagraphBlock(seq));
             }
         }
+
         if (current_list)
         {
             blocks.push_back(current_list);
@@ -787,12 +848,20 @@ public:
         std::cout << "Статистика на файла:\n";
         std::cout << "  Брой редове: " << stats.total_lines << "\n";
         std::cout << "  Разпределение по тип блокове:\n";
-        std::cout << "    h1: " << stats.headings[1] << ", h2: " << stats.headings[2] << ", h3: " << stats.headings[3]
-                  << ", h4: " << stats.headings[4] << ", h5: " << stats.headings[5] << ", h6: " << stats.headings[6] << "\n";
-        std::cout << "    p: " << stats.paragraphs << ", hr: " << stats.hr << ", li: " << stats.list_items << "\n";
+        std::cout << "    h1: " << stats.headings[1]
+                  << ", h2: " << stats.headings[2]
+                  << ", h3: " << stats.headings[3]
+                  << ", h4: " << stats.headings[4]
+                  << ", h5: " << stats.headings[5]
+                  << ", h6: " << stats.headings[6] << "\n";
+        std::cout << "    p: " << stats.paragraphs
+                  << ", hr: " << stats.hr
+                  << ", li: " << stats.list_items << "\n";
         std::cout << "  Брой форматиращи елементи:\n";
-        std::cout << "    <i>: " << stats.italic << ", <b>: " << stats.bold
-                  << ", <code>: " << stats.code << ", <s>: " << stats.strike << "\n";
+        std::cout << "    <i>: " << stats.italic
+                  << ", <b>: " << stats.bold
+                  << ", <code>: " << stats.code
+                  << ", <s>: " << stats.strike << "\n";
     }
 
     void printTreeStructure() const
@@ -880,7 +949,10 @@ public:
 
 protected:
     std::string getUsage() const override { return "print <input>"; }
-    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override { doc.printTreeStructure(); }
+    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override
+    {
+        doc.printTreeStructure();
+    }
 };
 
 class ValidateCommand : public DocumentCommand
@@ -890,7 +962,10 @@ public:
 
 protected:
     std::string getUsage() const override { return "validate <input>"; }
-    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override { doc.printErrors(); }
+    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override
+    {
+        doc.printErrors();
+    }
 };
 
 class InfoCommand : public DocumentCommand
@@ -900,7 +975,10 @@ public:
 
 protected:
     std::string getUsage() const override { return "info <input>"; }
-    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override { doc.printStats(); }
+    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &) override
+    {
+        doc.printStats();
+    }
 };
 
 class TranslateCommand : public DocumentCommand
@@ -911,7 +989,10 @@ public:
 protected:
     size_t requiredArgs() const override { return 3; }
     std::string getUsage() const override { return "translate <input> <output>"; }
-    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &args) override { doc.translateToHTML(args[2]); }
+    void executeWithFile(MarkdownDocument &doc, const std::vector<std::string> &args) override
+    {
+        doc.translateToHTML(args[2]);
+    }
 };
 
 class ExitCommand : public Command
@@ -922,7 +1003,10 @@ private:
 public:
     ExitCommand(bool &running) : m_running(running) {}
     std::string getName() const override { return "exit"; }
-    void execute(MarkdownDocument &, const std::vector<std::string> &) override { m_running = false; }
+    void execute(MarkdownDocument &, const std::vector<std::string> &) override
+    {
+        m_running = false;
+    }
 };
 
 // ==========================================
@@ -982,7 +1066,7 @@ public:
             }
             if (!found)
             {
-                std::cout << "Невалидна команда. Опитайте пак.\n";
+                std::cout << "Невалидна команда. Налични команди: print, validate, info, translate, exit\n";
             }
         }
         clean();
