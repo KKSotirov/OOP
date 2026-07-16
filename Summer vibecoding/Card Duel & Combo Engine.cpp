@@ -21,7 +21,7 @@ protected:
         std::swap(this->effect, other.effect);
     }
 
-    void setterHelper(char *dest, const char *src)
+    void setterHelper(char *&dest, const char *src)
     {
         char *temp = src ? new char[strlen(src) + 1] : nullptr;
         if (src != nullptr)
@@ -32,12 +32,18 @@ protected:
 
 public:
     // Def constructor
-    Card() : name(nullptr) {}
+    Card() : name(nullptr), effect(nullptr) {}
     // Par constructor
-    Card(const char *newName, const char *newEffect)
+    Card(const char *newName, const char *newEffect) : name(nullptr), effect(nullptr)
     {
         setterHelper(this->name, newName);
         setterHelper(this->effect, newEffect);
+    }
+    // Copy constructor
+    Card(const Card &other)
+    {
+        setterHelper(this->name, other.getName());
+        setterHelper(this->effect, other.getEffect());
     }
     // Operator = using copy and swap
     Card &operator=(Card other)
@@ -85,13 +91,6 @@ public:
     MonsterCard() : Card(), attack(0), defense(0) {}
     // Par constructor
     MonsterCard(const int newAttack, const int newDefense, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), attack(newAttack), defense(newDefense) {}
-    // Copy constructor
-    MonsterCard(const MonsterCard &other)
-    {
-        this->setName(other.getName());
-        this->attack = other.attack;
-        this->defense = other.defense;
-    }
     // NO dyn mem ~~> no ro3
     int getAttack() const
     {
