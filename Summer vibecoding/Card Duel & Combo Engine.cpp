@@ -2,6 +2,17 @@
 #include <cstring>
 #include <utility>
 
+enum class SpellType
+{
+    QuickPlay,
+    Continuous,
+    Equip,
+    Field,
+    Ritual,
+    POLYMERIZATION,
+    Normal
+};
+
 class Card
 {
 private:
@@ -40,7 +51,7 @@ public:
         setterHelper(this->effect, newEffect);
     }
     // Copy constructor
-    Card(const Card &other)
+    Card(const Card &other) : name(nullptr), effect(nullptr)
     {
         setterHelper(this->name, other.getName());
         setterHelper(this->effect, other.getEffect());
@@ -104,7 +115,7 @@ public:
     {
         return this->defense;
     }
-    void setAefense(const int newdefense)
+    void setDefense(const int newdefense)
     {
         this->defense = newdefense;
     }
@@ -119,5 +130,38 @@ public:
         std::cout << "[Card Name] ~~> " << this->getName()
                   << ", with stats : {ATK = " << this->attack
                   << "}, {DEFF = " << this->defense << "} !" << std::endl;
+    }
+};
+
+class SpellCard : virtual public Card
+{
+private:
+    SpellType type;
+
+public:
+    // Def constructor
+    SpellCard() : Card(), type(SpellType::Normal) {}
+    // Par constructor
+    SpellCard(const SpellType newType, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), type(newType) {}
+
+    // Getters + Setters
+    void setType(const SpellType newType)
+    {
+        this->type = newType;
+    }
+    SpellType getType() const
+    {
+        return this->type;
+    }
+
+    // Virtual functions
+    virtual void play() const override
+    {
+        std::cout << "[SPELL CARD] ~~> {NAME = " << this->getName()
+                  << "}, {EFFECT = " << this->getEffect() << "} !!" << std::endl;
+    }
+    virtual SpellCard *clone() const override
+    {
+        return new SpellCard(*this);
     }
 };
