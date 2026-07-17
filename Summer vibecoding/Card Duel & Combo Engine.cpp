@@ -13,6 +13,13 @@ enum class SpellType
     Normal
 };
 
+enum class TrapType
+{
+    Counter,
+    Continuous,
+    Normal
+};
+
 class Card
 {
 private:
@@ -163,5 +170,38 @@ public:
     virtual SpellCard *clone() const override
     {
         return new SpellCard(*this);
+    }
+};
+
+class TrapCard : virtual public Card
+{
+private:
+    TrapType type;
+
+public:
+    // Def Constructor
+    TrapCard() : Card(), type(TrapType::Normal) {}
+    // Par Constructor
+    TrapCard(const TrapType cardType, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), type(cardType) {}
+
+    // Getters + Setters
+    void setType(const TrapType newType)
+    {
+        this->type = newType;
+    }
+    TrapType getType() const
+    {
+        return this->type;
+    }
+
+    // Virtual functions
+    virtual void play() const override
+    {
+        std::cout << "[TRAP CARD] ~~> {NAME = " << this->getName()
+                  << "}, {EFFECT = " << this->getEffect() << "} !!" << std::endl;
+    }
+    virtual TrapCard *clone() const
+    {
+        return new TrapCard(*this);
     }
 };
