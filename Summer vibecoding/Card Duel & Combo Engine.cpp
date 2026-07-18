@@ -18,19 +18,27 @@ void printSpellType(SpellType spellType)
     {
     case SpellType::QuickPlay:
         std::cout << "QuickPlay Spell" << std::endl;
+        break;
     case SpellType::Continuous:
         std::cout << "Continuous Spell" << std::endl;
+        break;
     case SpellType::Equip:
         std::cout << "Equip Spell" << std::endl;
+        break;
     case SpellType::Field:
         std::cout << "Field Spell" << std::endl;
+        break;
     case SpellType::Ritual:
         std::cout << "Ritual Spell" << std::endl;
+        break;
     case SpellType::POLYMERIZATION:
         std::cout << "POLYMERIZATION" << std::endl;
+        break;
     default:
         std::cout << "Normal Spell" << std::endl;
+        break;
     }
+    std::cout << std::endl;
 }
 enum class TrapType
 {
@@ -45,11 +53,15 @@ void printTrapType(TrapType trapType)
     {
     case TrapType::Counter:
         std::cout << "Counter Trap" << std::endl;
+        break;
     case TrapType::Continuous:
         std::cout << "Continuous Trap" << std::endl;
+        break;
     default:
         std::cout << "Normal trap" << std::endl;
+        break;
     }
+    std::cout << std::endl;
 }
 class Card
 {
@@ -274,5 +286,106 @@ public:
                   << "}, {EFFECT = " << this->getEffect() << "}, "
                   << "{ATTACK = " << this->getAttack() << ", DEFFENSE = " << this->getDefense()
                   << "}!!" << std::endl;
+    }
+};
+
+class DuelBoard
+{
+private:
+    MonsterCard *monsterZones[5];
+    Card *backrowZones[5]; // CAN BE SPELL OR TRAP OR PEN
+    Card **Graveyard;
+    int count;
+    int capacity = 2;
+
+    void free()
+    {
+        for (size_t i = 0; i < 5; i++)
+        {
+            delete monsterZones[i];
+            delete backrowZones[i];
+            monsterZones[i] = nullptr;
+            backrowZones[i] = nullptr;
+        }
+        for (size_t i = 0; i < count; i++)
+        {
+            delete Graveyard[i];
+            Graveyard[i] = nullptr;
+        }
+        delete[] Graveyard;
+        Graveyard = nullptr;
+        count = 0;
+        capacity = 0;
+    }
+
+    void resize()
+    {
+        capacity *= 2;
+        Card **newGraveyard = new Card *[capacity];
+        for (size_t i = 0; i < count; i++)
+        {
+            newGraveyard[i] = this->Graveyard[i];
+        }
+        delete[] Graveyard;
+        Graveyard = newGraveyard;
+    }
+
+    void copyFrom(const DuelBoard &other)
+    {
+        this->capacity = other.capacity;
+        this->count = other.count;
+        for (size_t i = 0; i < count; i++)
+        {
+            this->Graveyard[i] = other.Graveyard[i]->clone(); // copying the whole graveyard
+        }
+        for (size_t i = 0; i < 5; i++)
+        {
+            this->monsterZones[i] = other.monsterZones[i] ? other.monsterZones[i]->clone() : nullptr;
+            this->backrowZones[i] = other.backrowZones[i] ? other.backrowZones[i]->clone() : nullptr;
+        }
+    }
+
+public:
+    // Defaut Constructor
+    DuelBoard() : count(0), capacity(2)
+    {
+        Graveyard = new Card *[capacity]; // !!!!!!!!!!!!!!!
+        for (size_t i = 0; i < 5; i++)
+        {
+            this->monsterZones[i] = nullptr;
+            this->backrowZones[i] = nullptr;
+        }
+    }
+    // Par Constructor
+    DuelBoard(const int otherCount, const int otherCapacity, const MonsterCard *otherMonsterZones[5], const Card *otherBackrowZones[5], const Card **otherGraveyard) : count(otherCount), capacity(otherCapacity)
+    {
+        for (size_t i = 0; i < 5; i++)
+        {
+            this->monsterZones[i] = otherMonsterZones[i] ? otherMonsterZones[i]->clone() : nullptr;
+            this->backrowZones[i] = otherBackrowZones[i] ? otherBackrowZones[i]->clone() : nullptr;
+        }
+        for (size_t i = 0; i < count; i++)
+        {
+            this->Graveyard[i] = otherGraveyard[i] ? otherGraveyard[i]->clone() : nullptr;
+        }
+    }
+    // Copy Constructor
+    DuelBoard(const DuelBoard &other)
+    {
+        copyFrom(other);
+    }
+    // Operator =
+    DuelBoard &operator=(const DuelBoard &other)
+    {
+        if (this != &other)
+        {
+            free();
+            copyFrom(other);
+        }
+        return *this;
+    }
+    ~DuelBoard()
+    {
+        free();
     }
 };
