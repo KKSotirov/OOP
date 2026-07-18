@@ -70,6 +70,7 @@ private:
     char *name;
     char *effect;
 
+    // Helper to deallocate dynamic memory safely
     void free()
     {
         delete[] name;
@@ -77,12 +78,14 @@ private:
     }
 
 protected:
+    // Helper for Rule of 3/5
     void swap(Card &other)
     {
         std::swap(this->name, other.name);
         std::swap(this->effect, other.effect);
     }
 
+    // Helper to handle dynamic string assignment (deep copy)
     void setterHelper(char *&dest, const char *src)
     {
         char *temp = src ? new char[strlen(src) + 1] : nullptr;
@@ -107,13 +110,13 @@ public:
         setterHelper(this->name, other.getName());
         setterHelper(this->effect, other.getEffect());
     }
-    // Operator = using copy and swap
+    // Operator = using copy and swap idiom
     Card &operator=(Card other)
     {
         this->swap(other);
         return *this;
     }
-    // Virtual destructor
+    // Virtual destructor ensuring proper cleanup of derived classes
     virtual ~Card()
     {
         free();
@@ -137,7 +140,7 @@ public:
         return this->effect;
     }
 
-    // Virtual functions
+    // Virtual functions for polymorphic behavior
     virtual void play() const = 0;
     virtual Card *clone() const = 0;
 };
@@ -299,6 +302,7 @@ private:
     int count;
     int capacity = 2;
 
+    // Release all dynamically allocated resources
     void free()
     {
         for (size_t i = 0; i < 5; i++)
@@ -319,6 +323,7 @@ private:
         capacity = 0;
     }
 
+    // Expand graveyard capacity when full
     void resize()
     {
         capacity *= 2;
@@ -331,13 +336,15 @@ private:
         Graveyard = newGraveyard;
     }
 
+    // Deep copy helper for Copy Constructor and Assignment Operator
     void copyFrom(const DuelBoard &other)
     {
         this->capacity = other.capacity;
         this->count = other.count;
+        this->Graveyard = new Card *[capacity]; // Allocate new memory for graveyard
         for (size_t i = 0; i < count; i++)
         {
-            this->Graveyard[i] = other.Graveyard[i]->clone(); // copying the whole graveyard
+            this->Graveyard[i] = other.Graveyard[i]->clone(); // Deep copy using polymorphic clone
         }
         for (size_t i = 0; i < 5; i++)
         {
@@ -350,7 +357,7 @@ public:
     // Defaut Constructor
     DuelBoard() : count(0), capacity(2)
     {
-        Graveyard = new Card *[capacity]; // !!!!!!!!!!!!!!!
+        Graveyard = new Card *[capacity]; // Initial graveyard allocation
         for (size_t i = 0; i < 5; i++)
         {
             this->monsterZones[i] = nullptr;
@@ -360,11 +367,13 @@ public:
     // Par Constructor
     DuelBoard(const int otherCount, const int otherCapacity, const MonsterCard *otherMonsterZones[5], const Card *otherBackrowZones[5], const Card **otherGraveyard) : count(otherCount), capacity(otherCapacity)
     {
+        // Allocate and clone to ensure deep copy
         for (size_t i = 0; i < 5; i++)
         {
             this->monsterZones[i] = otherMonsterZones[i] ? otherMonsterZones[i]->clone() : nullptr;
             this->backrowZones[i] = otherBackrowZones[i] ? otherBackrowZones[i]->clone() : nullptr;
         }
+        this->Graveyard = new Card *[capacity];
         for (size_t i = 0; i < count; i++)
         {
             this->Graveyard[i] = otherGraveyard[i] ? otherGraveyard[i]->clone() : nullptr;
@@ -380,7 +389,7 @@ public:
     {
         if (this != &other)
         {
-            free();
+            free(); // Clean up current state before copying
             copyFrom(other);
         }
         return *this;
@@ -394,6 +403,7 @@ public:
     void playCard(Card *card)
     {
         // CASE 1 ~~> PENDULUM CARD
+        // Checked first because Pendulum inherits from both Monster and Spell
         if (PendulumCard *pen = dynamic_cast<PendulumCard *>(card))
         {
             std::cout << "How would you like to play your pendulum card - as a pen scale or a monster?   "
@@ -428,6 +438,7 @@ public:
         }
 
         // CASE 2 ~~> MONSTER CARD
+        // Cast to check if it's a monster and perform deep copy into zone
         if (MonsterCard *mon = dynamic_cast<MonsterCard *>(card))
         {
             for (size_t i = 0; i < 5; i++)
@@ -458,7 +469,7 @@ public:
             }
             else
             {
-                // Normal Spell -> Graveyard
+                // Normal Spell -> Graveyard (needs automatic cleanup)
                 if (count >= capacity)
                     resize();
                 Graveyard[count++] = spell->clone();
