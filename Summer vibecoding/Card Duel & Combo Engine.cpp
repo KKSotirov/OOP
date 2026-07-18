@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstring>
 #include <utility>
+#include <exception>
 
 enum class SpellType
 {
@@ -387,5 +388,107 @@ public:
     ~DuelBoard()
     {
         free();
+    }
+
+    // THE FINAL BOSS!!!!!
+    void playCard(Card *card)
+    {
+        // CASE 1 ~~> PENDULUM CARD
+        if (PendulumCard *pen = dynamic_cast<PendulumCard *>(card))
+        {
+            std::cout << "How would you like to play your pendulum card - as a pen scale or a monster?   "
+                      << "enter 'm' for monster, 's' for scale." << std::endl;
+            char penUse;
+            std::cin >> penUse;
+            if (penUse == 'm')
+            {
+                for (size_t i = 0; i < 5; i++)
+                {
+                    if (monsterZones[i] == nullptr)
+                    {
+                        monsterZones[i] = pen->clone();
+                        return;
+                    }
+                }
+            }
+            if (penUse == 's')
+            {
+                if (backrowZones[0] == nullptr)
+                {
+                    backrowZones[0] = pen->clone();
+                    return;
+                }
+                else if (backrowZones[4] == nullptr)
+                {
+                    backrowZones[4] = pen->clone();
+                    return;
+                }
+            }
+            return;
+        }
+
+        // CASE 2 ~~> MONSTER CARD
+        if (MonsterCard *mon = dynamic_cast<MonsterCard *>(card))
+        {
+            for (size_t i = 0; i < 5; i++)
+            {
+                if (monsterZones[i] == nullptr)
+                {
+                    monsterZones[i] = mon->clone();
+                    return;
+                }
+            }
+            throw std::invalid_argument("Cannot play monster card because there are no unoccupied zones");
+        }
+
+        // CASE 3~~> SPELL CARD
+        if (SpellCard *spell = dynamic_cast<SpellCard *>(card))
+        {
+            if (spell->getType() == SpellType::Continuous || spell->getType() == SpellType::Equip)
+            {
+                for (size_t i = 0; i < 5; i++)
+                {
+                    if (backrowZones[i] == nullptr)
+                    {
+                        backrowZones[i] = spell->clone();
+                        return;
+                    }
+                }
+                throw std::invalid_argument("Cannot play spell card because there are no unoccupied zones");
+            }
+            else
+            {
+                // Normal Spell -> Graveyard
+                if (count >= capacity)
+                    resize();
+                Graveyard[count++] = spell->clone();
+                return;
+            }
+        }
+
+        // CASE 4 ~~> TRAP CARD
+        if (TrapCard *trap = dynamic_cast<TrapCard *>(card))
+        {
+            if (trap->getType() == TrapType::Continuous)
+            {
+                for (size_t i = 0; i < 5; i++)
+                {
+                    if (backrowZones[i] == nullptr)
+                    {
+                        backrowZones[i] = trap->clone();
+                        return;
+                    }
+                }
+                throw std::invalid_argument("Cannot play trap card because there are no unoccupied zones");
+            }
+            else
+            {
+                // Normal Trap -> Graveyard
+                if (count >= capacity)
+                    resize();
+                Graveyard[count++] = trap->clone();
+                return;
+            }
+        }
     }
 };
