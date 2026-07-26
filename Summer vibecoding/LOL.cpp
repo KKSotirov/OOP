@@ -16,7 +16,7 @@ private:
     }
 
 protected:
-    void setterHelper(char *dest, const char *src)
+    void setterHelper(char *&dest, const char *src)
     {
         char *temp = src ? new char[strlen(src) + 1] : nullptr;
         if (src != nullptr)
@@ -41,7 +41,7 @@ public:
         setterHelper(this->name, newName);
     }
     // Copy constructor
-    Entity(const Entity &other) : id(++counter)
+    Entity(const Entity &other) : id(++counter), name(nullptr)
     {
         setterHelper(this->name, other.name);
     }
@@ -58,21 +58,21 @@ public:
     }
 
     // Operator >
-    bool operator>(const Entity &other)
+    bool operator>(const Entity &other) const
     {
         return this->id > other.id;
     }
-    bool operator<(const Entity &other)
+    bool operator<(const Entity &other) const
     {
-        return !(this->id > other.id);
+        return other.id > this->id;
     }
-    void operator<<(const Entity &object)
+    friend std::ostream &operator<<(std::ostream &os, const Entity &object)
     {
         std::cout << "[KEY INFO] ~> {ID = " << object.id
                   << "},  {NAME = " << object.name << " }"
                   << std::endl;
     }
-    virtual void operator+(const Entity *other) = 0;
+    virtual Entity *operator+(const Entity *other) = 0;
     virtual Entity *operator*(const int multiplier) const = 0;
     virtual Entity *clone() const = 0;
     virtual Entity *activate() const = 0; // use ability
