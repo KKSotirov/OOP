@@ -23,6 +23,10 @@ public:
 
     Item &operator+=(const Champion &other)
     {
+        for (size_t i = 0; i < MAX_INVENTORY_SIZE; i++)
+        {
+            if (other.getItems(i) == nullptr)
+        }
     }
 };
 
@@ -101,12 +105,19 @@ public:
     virtual Champion *clone() const = 0;
     virtual Champion *activate() const = 0; // use ability
     virtual Champion &operator++() = 0;     // Level up
+    // GETTERS + SETTERS
+    void setName(const char *newName)
+    {
+        setterHelper(this->name, newName);
+    }
+    char *getName() const
+    {
+        return this->name;
+    }
+    void setItem(const size_t index, const Item &newItem)
+    {
+        this->items[index] = newItem;
+    }
 };
 
 int Champion::counter = 0;
-
-class PhysicalFighter : virtual public Champion
-{
-private:
-    int attackDamage;
-};
