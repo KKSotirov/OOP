@@ -2,13 +2,37 @@
 #include <cstring>
 #include <stdexcept>
 #include <utility>
+const size_t MAX_INVENTORY_SIZE = 6;
 
-class Entity
+class Item
+{
+private:
+    int bonusAD;
+    int bonusAP;
+    int bonusArmor;
+    int bonusMR;
+
+public:
+    Item &operator+(const Item &other)
+    {
+        this->bonusAD += other.bonusAD;
+        this->bonusAP += other.bonusAP;
+        this->bonusMR += other.bonusMR;
+        this->bonusArmor += other.bonusArmor;
+    }
+
+    Item &operator+=(const Champion &other)
+    {
+    }
+};
+
+class Champion
 {
 private:
     char *name;
     const int id;
     static int counter;
+    Item *items[MAX_INVENTORY_SIZE];
 
     void free()
     {
@@ -25,7 +49,7 @@ protected:
         dest = temp;
     }
 
-    void swap(Entity &other) noexcept
+    void swap(Champion &other) noexcept
     {
         std::swap(this->name, other.name);
         // id's cannot be copied
@@ -34,49 +58,55 @@ protected:
 public:
     // Dyn Mem ==> RO3
     // Def constr
-    Entity() : name(nullptr), id(++counter) {}
+    Champion() : name(nullptr), id(++counter) {}
     // Par constr
-    Entity(const char *newName) : name(nullptr), id(++counter)
+    Champion(const char *newName) : name(nullptr), id(++counter)
     {
         setterHelper(this->name, newName);
     }
     // Copy constructor
-    Entity(const Entity &other) : id(++counter), name(nullptr)
+    Champion(const Champion &other) : id(++counter), name(nullptr)
     {
         setterHelper(this->name, other.name);
     }
     // Operator =
-    Entity &operator=(Entity other)
+    Champion &operator=(Champion other)
     {
         this->swap(other);
         return *this;
     }
     // Destructor
-    ~Entity()
+    ~Champion()
     {
         free();
     }
 
     // Operator >
-    bool operator>(const Entity &other) const
+    bool operator>(const Champion &other) const
     {
         return this->id > other.id;
     }
-    bool operator<(const Entity &other) const
+    bool operator<(const Champion &other) const
     {
-        return other.id > this->id;
+        return other > *this;
     }
-    friend std::ostream &operator<<(std::ostream &os, const Entity &object)
+    friend std::ostream &operator<<(std::ostream &os, const Champion &object)
     {
         std::cout << "[KEY INFO] ~> {ID = " << object.id
                   << "},  {NAME = " << object.name << " }"
                   << std::endl;
     }
-    virtual Entity *operator+(const Entity *other) = 0;
-    virtual Entity *operator*(const int multiplier) const = 0;
-    virtual Entity *clone() const = 0;
-    virtual Entity *activate() const = 0; // use ability
-    virtual Entity &operator++() = 0;     // Level up
+    virtual Champion *operator+(const Champion *other) = 0;
+    virtual Champion *operator*(const int multiplier) const = 0;
+    virtual Champion *clone() const = 0;
+    virtual Champion *activate() const = 0; // use ability
+    virtual Champion &operator++() = 0;     // Level up
 };
 
-int Entity::counter = 0;
+int Champion::counter = 0;
+
+class PhysicalFighter : virtual public Champion
+{
+private:
+    int attackDamage;
+};
