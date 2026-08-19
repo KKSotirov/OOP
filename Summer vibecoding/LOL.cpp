@@ -25,7 +25,7 @@ public:
     {
         for (size_t i = 0; i < MAX_INVENTORY_SIZE; i++)
         {
-            if (other.getItems(i) == nullptr)
+            // if (other.getItems(i) == nullptr)
         }
     }
 };
@@ -116,7 +116,7 @@ public:
     }
     void setItem(const size_t index, const Item &newItem)
     {
-        this->items[index] = newItem;
+        // this->items[index] = newItem;
     }
 };
 

@@ -64,6 +64,36 @@ void printTrapType(TrapType trapType)
     }
     std::cout << std::endl;
 }
+
+enum class MonsterAttribute
+{
+    DARK,
+    LIGHT,
+    EARTH,
+    WATER,
+    FIRE,
+    WIND,
+    DIVINE
+};
+
+enum class MonsterType
+{
+    AQUA,
+    BEAST,
+    BEAST_WARRIOR,
+    DINOSAUR,
+    DIVINE_BEAST,
+    DRAGON,
+    FAIRY,
+    FIEND,
+    MACHINE,
+    SPELLCASTER,
+    THUNDER,
+    WARRIOR,
+    WYRM,
+    REPTILE
+};
+
 class Card
 {
 private:
@@ -150,12 +180,14 @@ class MonsterCard : virtual public Card
 private:
     int attack;
     int defense;
+    MonsterAttribute attribute;
+    MonsterType type;
 
 public:
     // Default constructor
-    MonsterCard() : Card(), attack(0), defense(0) {}
+    MonsterCard() : Card(), attack(0), defense(0), attribute(MonsterAttribute::EARTH), type(MonsterType::WARRIOR) {}
     // Par constructor
-    MonsterCard(const int newAttack, const int newDefense, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), attack(newAttack), defense(newDefense) {}
+    MonsterCard(const int newAttack, const int newDefense, const char *cardName, const char *cardEffect, const MonsterAttribute newAttribute, const MonsterType newType) : Card(cardName, cardEffect), attack(newAttack), defense(newDefense), attribute(newAttribute), type(newType) {}
     // NO dyn mem ~~> no ro3
     int getAttack() const
     {
@@ -172,6 +204,22 @@ public:
     void setDefense(const int newdefense)
     {
         this->defense = newdefense;
+    }
+    MonsterAttribute getMonsterAttribute() const
+    {
+        return this->attribute;
+    }
+    void setMonsterAttribute(const MonsterAttribute newAttribute)
+    {
+        this->attribute = newAttribute;
+    }
+    MonsterType getMonsterType() const
+    {
+        return this->type;
+    }
+    void setMonsterType(const MonsterType newType)
+    {
+        this->type = newType;
     }
 
     // Virtual functions
@@ -271,7 +319,7 @@ public:
     // Def constructor
     PendulumCard() : Card(), MonsterCard(), SpellCard(), pendulumScale(1) {}
     // Par constructor
-    PendulumCard(const int penScale, const int penAttack, const int penDeff, const char *penName, const char *penEffect) : Card(penName, penEffect), MonsterCard(penAttack, penDeff, penName, penEffect), SpellCard(SpellType::Continuous, penName, penEffect)
+    PendulumCard(const int penScale, const int penAttack, const int penDeff, const char *penName, const char *penEffect, const MonsterAttribute attribute, const MonsterType type) : Card(penName, penEffect), MonsterCard(penAttack, penDeff, penName, penEffect, attribute, type), SpellCard(SpellType::Continuous, penName, penEffect)
     {
         if (isValidPenScale(penScale))
             this->pendulumScale = penScale;
@@ -280,6 +328,14 @@ public:
     // Copy constructor -> no need because of no dyn memory
     // Operator = -> no need because of no dyn memory
     // Destructor -> no need becase of no dyn memory
+    int getPendulumScale() const
+    {
+        return this->pendulumScale;
+    }
+    void setPendulumScale(const int newPenScale)
+    {
+        this->pendulumScale = newPenScale;
+    }
     virtual PendulumCard *clone() const override
     {
         return new PendulumCard(*this);
@@ -295,17 +351,21 @@ public:
 
 class DuelBoard
 {
+public:
+    static constexpr int MAX_MONSTER_AND_BACKROW_ZONES = 5;
+
 private:
-    MonsterCard *monsterZones[5];
+    MonsterCard *monsterZones[MAX_MONSTER_AND_BACKROW_ZONES];
     Card *backrowZones[5]; // CAN BE SPELL OR TRAP OR PEN
     Card **Graveyard;
     int count;
     int capacity = 2;
+    SpellCard *fieldSpell;
 
     // Release all dynamically allocated resources
     void free()
     {
-        for (size_t i = 0; i < 5; i++)
+        for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
         {
             delete monsterZones[i];
             delete backrowZones[i];
@@ -317,6 +377,7 @@ private:
             delete Graveyard[i];
             Graveyard[i] = nullptr;
         }
+        delete fieldSpell;
         delete[] Graveyard;
         Graveyard = nullptr;
         count = 0;
@@ -346,29 +407,30 @@ private:
         {
             this->Graveyard[i] = other.Graveyard[i]->clone(); // Deep copy using polymorphic clone
         }
-        for (size_t i = 0; i < 5; i++)
+        for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
         {
             this->monsterZones[i] = other.monsterZones[i] ? other.monsterZones[i]->clone() : nullptr;
             this->backrowZones[i] = other.backrowZones[i] ? other.backrowZones[i]->clone() : nullptr;
         }
+        this->fieldSpell = other.fieldSpell ? other.fieldSpell->clone() : nullptr;
     }
 
 public:
     // Defaut Constructor
-    DuelBoard() : count(0), capacity(2)
+    DuelBoard() : count(0), capacity(2), fieldSpell(nullptr)
     {
         Graveyard = new Card *[capacity]; // Initial graveyard allocation
-        for (size_t i = 0; i < 5; i++)
+        for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
         {
             this->monsterZones[i] = nullptr;
             this->backrowZones[i] = nullptr;
         }
     }
     // Par Constructor
-    DuelBoard(const int otherCount, const int otherCapacity, const MonsterCard *otherMonsterZones[5], const Card *otherBackrowZones[5], const Card **otherGraveyard) : count(otherCount), capacity(otherCapacity)
+    DuelBoard(const int otherCount, const int otherCapacity, const MonsterCard *otherMonsterZones[MAX_MONSTER_AND_BACKROW_ZONES], const Card *otherBackrowZones[MAX_MONSTER_AND_BACKROW_ZONES], const Card **otherGraveyard, const SpellCard *newFieldSpell) : count(otherCount), capacity(otherCapacity)
     {
         // Allocate and clone to ensure deep copy
-        for (size_t i = 0; i < 5; i++)
+        for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
         {
             this->monsterZones[i] = otherMonsterZones[i] ? otherMonsterZones[i]->clone() : nullptr;
             this->backrowZones[i] = otherBackrowZones[i] ? otherBackrowZones[i]->clone() : nullptr;
@@ -378,6 +440,7 @@ public:
         {
             this->Graveyard[i] = otherGraveyard[i] ? otherGraveyard[i]->clone() : nullptr;
         }
+        this->fieldSpell = newFieldSpell ? newFieldSpell->clone() : nullptr;
     }
     // Copy Constructor
     DuelBoard(const DuelBoard &other)
@@ -412,7 +475,7 @@ public:
             std::cin >> penUse;
             if (penUse == 'm')
             {
-                for (size_t i = 0; i < 5; i++)
+                for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
                 {
                     if (monsterZones[i] == nullptr)
                     {
@@ -441,7 +504,7 @@ public:
         // Cast to check if it's a monster and perform deep copy into zone
         if (MonsterCard *mon = dynamic_cast<MonsterCard *>(card))
         {
-            for (size_t i = 0; i < 5; i++)
+            for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
             {
                 if (monsterZones[i] == nullptr)
                 {
@@ -455,9 +518,21 @@ public:
         // CASE 3~~> SPELL CARD
         if (SpellCard *spell = dynamic_cast<SpellCard *>(card))
         {
+            if (spell->getType() == SpellType::Field)
+            {
+                if (this->fieldSpell != nullptr)
+                {
+                    if (count >= capacity)
+                        resize();
+                    Graveyard[count++] = this->fieldSpell;
+                    this->fieldSpell = nullptr;
+                }
+                this->fieldSpell = spell->clone();
+                return;
+            }
             if (spell->getType() == SpellType::Continuous || spell->getType() == SpellType::Equip)
             {
-                for (size_t i = 0; i < 5; i++)
+                for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
                 {
                     if (backrowZones[i] == nullptr)
                     {
@@ -482,7 +557,7 @@ public:
         {
             if (trap->getType() == TrapType::Continuous)
             {
-                for (size_t i = 0; i < 5; i++)
+                for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
                 {
                     if (backrowZones[i] == nullptr)
                     {
