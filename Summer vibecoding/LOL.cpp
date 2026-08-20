@@ -63,22 +63,26 @@ public:
     // Dyn Mem ==> RO3
     // Def constr
     Champion() : name(nullptr), id(++counter) {}
+
     // Par constr
     Champion(const char *newName) : name(nullptr), id(++counter)
     {
         setterHelper(this->name, newName);
     }
+
     // Copy constructor
     Champion(const Champion &other) : id(++counter), name(nullptr)
     {
         setterHelper(this->name, other.name);
     }
+
     // Operator =
     Champion &operator=(Champion other)
     {
         this->swap(other);
         return *this;
     }
+
     // Destructor
     ~Champion()
     {
@@ -90,30 +94,36 @@ public:
     {
         return this->id > other.id;
     }
+
     bool operator<(const Champion &other) const
     {
         return other > *this;
     }
+
     friend std::ostream &operator<<(std::ostream &os, const Champion &object)
     {
         std::cout << "[KEY INFO] ~> {ID = " << object.id
                   << "},  {NAME = " << object.name << " }"
                   << std::endl;
     }
+
     virtual Champion *operator+(const Champion *other) = 0;
     virtual Champion *operator*(const int multiplier) const = 0;
     virtual Champion *clone() const = 0;
     virtual Champion *activate() const = 0; // use ability
     virtual Champion &operator++() = 0;     // Level up
+
     // GETTERS + SETTERS
     void setName(const char *newName)
     {
         setterHelper(this->name, newName);
     }
+
     char *getName() const
     {
         return this->name;
     }
+
     void setItem(const size_t index, const Item &newItem)
     {
         // this->items[index] = newItem;

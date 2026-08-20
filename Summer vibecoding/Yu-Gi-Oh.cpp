@@ -13,6 +13,7 @@ enum class SpellType
     POLYMERIZATION,
     Normal
 };
+
 void printSpellType(SpellType spellType)
 {
     switch (spellType)
@@ -41,6 +42,7 @@ void printSpellType(SpellType spellType)
     }
     std::cout << std::endl;
 }
+
 enum class TrapType
 {
     Counter,
@@ -128,31 +130,35 @@ protected:
 public:
     // Def constructor
     Card() : name(nullptr), effect(nullptr) {}
+
     // Par constructor
     Card(const char *newName, const char *newEffect) : name(nullptr), effect(nullptr)
     {
         setterHelper(this->name, newName);
         setterHelper(this->effect, newEffect);
     }
+
     // Copy constructor
     Card(const Card &other) : name(nullptr), effect(nullptr)
     {
         setterHelper(this->name, other.getName());
         setterHelper(this->effect, other.getEffect());
     }
+
     // Operator = using copy and swap idiom
     Card &operator=(Card other)
     {
         this->swap(other);
         return *this;
     }
+
     // Virtual destructor ensuring proper cleanup of derived classes
     virtual ~Card()
     {
         free();
     }
 
-    // GETTERS + SETTERS
+    //  Getters + Setters
     void setName(const char *newName)
     {
         setterHelper(this->name, newName);
@@ -186,9 +192,12 @@ private:
 public:
     // Default constructor
     MonsterCard() : Card(), attack(0), defense(0), attribute(MonsterAttribute::EARTH), type(MonsterType::WARRIOR) {}
+
     // Par constructor
     MonsterCard(const int newAttack, const int newDefense, const char *cardName, const char *cardEffect, const MonsterAttribute newAttribute, const MonsterType newType) : Card(cardName, cardEffect), attack(newAttack), defense(newDefense), attribute(newAttribute), type(newType) {}
     // NO dyn mem ~~> no ro3
+
+    //  Getters + Setters
     int getAttack() const
     {
         return this->attack;
@@ -227,6 +236,7 @@ public:
     {
         return new MonsterCard(*this);
     }
+
     virtual void play() const override
     {
         std::cout << "[Card Name] ~~> " << this->getName()
@@ -243,6 +253,7 @@ private:
 public:
     // Def constructor
     SpellCard() : Card(), type(SpellType::Normal) {}
+
     // Par constructor
     SpellCard(const SpellType newType, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), type(newType) {}
 
@@ -264,6 +275,7 @@ public:
         printSpellType(this->type);
         std::cout << "} !!" << std::endl;
     }
+
     virtual SpellCard *clone() const override
     {
         return new SpellCard(*this);
@@ -278,6 +290,7 @@ private:
 public:
     // Def Constructor
     TrapCard() : Card(), type(TrapType::Normal) {}
+
     // Par Constructor
     TrapCard(const TrapType cardType, const char *cardName, const char *cardEffect) : Card(cardName, cardEffect), type(cardType) {}
 
@@ -299,6 +312,7 @@ public:
         printTrapType(this->type);
         std::cout << "} !!" << std::endl;
     }
+
     virtual TrapCard *clone() const
     {
         return new TrapCard(*this);
@@ -318,6 +332,7 @@ private:
 public:
     // Def constructor
     PendulumCard() : Card(), MonsterCard(), SpellCard(), pendulumScale(1) {}
+
     // Par constructor
     PendulumCard(const int penScale, const int penAttack, const int penDeff, const char *penName, const char *penEffect, const MonsterAttribute attribute, const MonsterType type) : Card(penName, penEffect), MonsterCard(penAttack, penDeff, penName, penEffect, attribute, type), SpellCard(SpellType::Continuous, penName, penEffect)
     {
@@ -325,9 +340,12 @@ public:
             this->pendulumScale = penScale;
         // else ~PendulumCard();
     }
+
     // Copy constructor -> no need because of no dyn memory
     // Operator = -> no need because of no dyn memory
     // Destructor -> no need becase of no dyn memory
+
+    //  Getters + Setters
     int getPendulumScale() const
     {
         return this->pendulumScale;
@@ -336,10 +354,13 @@ public:
     {
         this->pendulumScale = newPenScale;
     }
+
+    // Virtual functions
     virtual PendulumCard *clone() const override
     {
         return new PendulumCard(*this);
     }
+
     virtual void play() const override
     {
         std::cout << "[PENDULUM CARD] ~~> {NAME = " << this->getName()
@@ -372,6 +393,7 @@ private:
             monsterZones[i] = nullptr;
             backrowZones[i] = nullptr;
         }
+
         for (size_t i = 0; i < count; i++)
         {
             delete Graveyard[i];
@@ -380,6 +402,7 @@ private:
         delete fieldSpell;
         delete[] Graveyard;
         Graveyard = nullptr;
+
         count = 0;
         capacity = 0;
     }
@@ -389,6 +412,7 @@ private:
     {
         capacity *= 2;
         Card **newGraveyard = new Card *[capacity];
+
         for (size_t i = 0; i < count; i++)
         {
             newGraveyard[i] = this->Graveyard[i];
@@ -403,10 +427,12 @@ private:
         this->capacity = other.capacity;
         this->count = other.count;
         this->Graveyard = new Card *[capacity]; // Allocate new memory for graveyard
+
         for (size_t i = 0; i < count; i++)
         {
             this->Graveyard[i] = other.Graveyard[i]->clone(); // Deep copy using polymorphic clone
         }
+
         for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
         {
             this->monsterZones[i] = other.monsterZones[i] ? other.monsterZones[i]->clone() : nullptr;
@@ -426,6 +452,7 @@ public:
             this->backrowZones[i] = nullptr;
         }
     }
+
     // Par Constructor
     DuelBoard(const int otherCount, const int otherCapacity, const MonsterCard *otherMonsterZones[MAX_MONSTER_AND_BACKROW_ZONES], const Card *otherBackrowZones[MAX_MONSTER_AND_BACKROW_ZONES], const Card **otherGraveyard, const SpellCard *newFieldSpell) : count(otherCount), capacity(otherCapacity)
     {
@@ -435,6 +462,7 @@ public:
             this->monsterZones[i] = otherMonsterZones[i] ? otherMonsterZones[i]->clone() : nullptr;
             this->backrowZones[i] = otherBackrowZones[i] ? otherBackrowZones[i]->clone() : nullptr;
         }
+
         this->Graveyard = new Card *[capacity];
         for (size_t i = 0; i < count; i++)
         {
@@ -442,11 +470,13 @@ public:
         }
         this->fieldSpell = newFieldSpell ? newFieldSpell->clone() : nullptr;
     }
+
     // Copy Constructor
     DuelBoard(const DuelBoard &other)
     {
         copyFrom(other);
     }
+
     // Operator =
     DuelBoard &operator=(const DuelBoard &other)
     {
@@ -457,6 +487,7 @@ public:
         }
         return *this;
     }
+
     ~DuelBoard()
     {
         free();
@@ -473,6 +504,7 @@ public:
                       << "enter 'm' for monster, 's' for scale." << std::endl;
             char penUse;
             std::cin >> penUse;
+
             if (penUse == 'm')
             {
                 for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
@@ -484,6 +516,7 @@ public:
                     }
                 }
             }
+
             if (penUse == 's')
             {
                 if (backrowZones[0] == nullptr)
@@ -497,6 +530,7 @@ public:
                     return;
                 }
             }
+
             return;
         }
 
@@ -512,6 +546,7 @@ public:
                     return;
                 }
             }
+
             throw std::invalid_argument("Cannot play monster card because there are no unoccupied zones");
         }
 
@@ -530,6 +565,7 @@ public:
                 this->fieldSpell = spell->clone();
                 return;
             }
+
             if (spell->getType() == SpellType::Continuous || spell->getType() == SpellType::Equip)
             {
                 for (size_t i = 0; i < MAX_MONSTER_AND_BACKROW_ZONES; i++)
@@ -542,6 +578,7 @@ public:
                 }
                 throw std::invalid_argument("Cannot play spell card because there are no unoccupied zones");
             }
+
             else
             {
                 // Normal Spell -> Graveyard (needs automatic cleanup)
@@ -565,8 +602,10 @@ public:
                         return;
                     }
                 }
+
                 throw std::invalid_argument("Cannot play trap card because there are no unoccupied zones");
             }
+
             else
             {
                 // Normal Trap -> Graveyard
