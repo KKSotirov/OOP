@@ -157,7 +157,7 @@ private:
 
     bool isValidUrlAdress(const char *url)
     {
-        return (url != nullptr);
+        return (url != nullptr) && strlen(url) > 0;
     }
 
     void free()
@@ -179,10 +179,9 @@ public:
     DesktopDevice() : urlAdress(nullptr), Device() {}
 
     // Par Constructor
-    DesktopDevice(const char *newUrlAdress, const char *newName) : Device(newName)
+    DesktopDevice(const char *newUrlAdress, const char *newName) : Device(newName), urlAdress(nullptr)
     {
-        if (isValidUrlAdress(newUrlAdress))
-            setterHelper(urlAdress, newUrlAdress);
+        setterHelper(urlAdress, newUrlAdress);
     }
 
     // Copy Constructor
@@ -235,5 +234,108 @@ public:
     {
         std::cout << "[Desktop] " << getName() << " (ID: " << getId()
                   << "), URL: " << urlAdress << "\n";
+    }
+};
+
+class Connection
+{
+private:
+    Device *device;
+    int connectedAt;
+
+    // Par constructor
+    friend class Server;
+    Connection(Device *newDevice, const int newConnectedAt) : device(newDevice), connectedAt(newConnectedAt) {}
+
+    // Forbid copying
+    Connection(const Connection &other) = delete;
+    Connection &operator=(const Connection &other) = delete;
+
+    // Destructor
+    ~Connection()
+    {
+        delete device;
+    }
+
+public:
+    // Getters+ Setters
+    Device *getDevice() const
+    {
+        return device;
+    }
+
+    int getConnectedAt() const
+    {
+        return connectedAt;
+    }
+};
+
+class Server
+{
+private:
+    Connection **connections;
+    unsigned capacity;
+    unsigned size;
+    unsigned timeout = 0;
+    unsigned currentTime;
+
+    void free()
+    {
+        for (size_t i = 0; i < size; i++)
+        {
+            delete connections[i];
+        }
+        delete[] connections;
+    }
+
+public:
+    Server(const unsigned newCapacity, const unsigned newTimeout) : capacity(newCapacity), timeout(newTimeout), size(0), currentTime(0)
+    {
+        connections = new Connection *[capacity];
+    }
+
+    bool connect(const Device &newDevice)
+    {
+        if (size >= capacity)
+            return false;
+
+        connections[++size] = new Connection(newDevice.clone(), currentTime);
+        return true;
+    }
+
+    bool disconnect(const int deviceId)
+    {
+        int index = -1;
+
+        for (size_t i = 0; i < size; i++)
+        {
+            if (connections[i]->device->getId() == deviceId)
+                index = i;
+        }
+
+        if (index == -1)
+            return false;
+
+        delete connections[index];
+
+        for (size_t i = index; i < size - 1; i++)
+        {
+            connections[i] = connections[i + 1];
+        }
+
+        connections[--size] = nullptr;
+
+        return true;
+    }
+
+    bool tick(const unsigned count)
+    {
+        currentTime += count;
+
+        for (size_t i = 0; i < count; i++)
+        {
+            if ((currentTime - connections[i]->getConnectedAt()) >= timeout)
+                disconnect(connections[i]->device->getId());
+        }
     }
 };
