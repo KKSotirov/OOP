@@ -15,7 +15,7 @@ private:
     }
 
 protected:
-    void setterHelper(char *dest, const char *src)
+    void setterHelper(char *&dest, const char *src)
     {
         char *temp = src ? new char[strlen(src) + 1] : nullptr;
         if (src != nullptr)
@@ -35,7 +35,7 @@ public:
     // default constructor
     Item() : name(nullptr), bonusHealth(0), bonusAttack(0) {}
     // parametrised constructor
-    Item(const char *str, const int bHealth, const int bAttack) : bonusHealth(bHealth), bonusAttack(bAttack)
+    Item(const char *str, const int bHealth, const int bAttack) : name(nullptr), bonusHealth(bHealth), bonusAttack(bAttack)
     {
         setterHelper(this->name, str);
     }

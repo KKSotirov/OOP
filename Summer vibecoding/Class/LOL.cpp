@@ -84,7 +84,7 @@ public:
     }
 
     // Destructor
-    ~Champion()
+    virtual ~Champion()
     {
         free();
     }
@@ -131,3 +131,5 @@ public:
 };
 
 int Champion::counter = 0;
+
+// classes -> Bruiser, Mage, Assassin, ADC, Tank, <Hybrid>
