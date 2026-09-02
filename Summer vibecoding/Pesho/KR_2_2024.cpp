@@ -278,7 +278,7 @@ public:
         return *this;
     }
 
-    ~Mage()
+    ~Mage() override
     {
         free();
     }
@@ -320,5 +320,105 @@ public:
     {
         other->setHp(other->getHp() * poison);
         this->Player::dealDmg(other);
+    }
+};
+
+class Necromancer : public Mage
+{
+private:
+    Player **possessedCorpses;
+    size_t defeated_count;
+    size_t defeated_capacity;
+
+    void freeNecromancer()
+    {
+        for (size_t i = 0; i < defeated_count; i++)
+        {
+            delete possessedCorpses[i];
+        }
+        delete[] possessedCorpses;
+        possessedCorpses = nullptr;
+    }
+
+    void resizePosessed()
+    {
+        defeated_capacity *= 2;
+        Player **tmp = new Player *[defeated_capacity];
+        for (size_t i = 0; i < defeated_count; i++)
+        {
+            tmp[i] = possessedCorpses[i];
+        }
+        delete[] possessedCorpses;
+        possessedCorpses = tmp;
+    }
+
+    void copyNecro(const Necromancer &other)
+    {
+        defeated_count = other.defeated_count;
+        defeated_capacity = other.defeated_capacity;
+        Player **possessedCorpses = new Player *[defeated_capacity];
+        for (size_t i = 0; i < defeated_count; i++)
+        {
+            possessedCorpses[i] = other.possessedCorpses[i]->clone();
+        }
+    }
+
+public:
+    Necromancer(const char *_name, const WeaponType _weapon, const Position _pos, const unsigned _ad, const unsigned _hp, const char *_spell, const double _poison) : Mage(_name, _weapon, _pos, _ad, _hp, _spell, _poison), defeated_count(0), defeated_capacity(2)
+    {
+        possessedCorpses = new Player *[defeated_capacity];
+    }
+
+    Necromancer(const Necromancer &other) : Mage(other), possessedCorpses(nullptr)
+    {
+        copyNecro(other);
+    }
+
+    Necromancer &operator=(const Necromancer &other)
+    {
+        if (this != &other)
+        {
+            copyNecro(other);
+            this->Mage::operator=(other);
+        }
+        return *this;
+    }
+
+    ~Necromancer() override
+    {
+        freeNecromancer();
+    }
+
+    // Virtual functions
+    Necromancer *clone() const override
+    {
+        return new Necromancer(*this);
+    }
+
+    void printInfo() const override
+    {
+        this->Mage::printInfo();
+        std::cout << "This is no mere mage ~> This is a 𝓝𝓮𝓬𝓻𝓸𝓶𝓪𝓷𝓬𝓮𝓻 ! \n";
+    }
+
+    void dealDmg(Player *other) override
+    {
+        this->Mage::dealDmg(other);
+        if (defeated_count > 0)
+        {
+            for (size_t i = 0; i < defeated_count; i++)
+            {
+                other->tankAttack(possessedCorpses[i]->getAd());
+            }
+        }
+
+        if (other->isDead())
+        {
+            // We possess him!
+            if (defeated_count >= defeated_capacity)
+                resizePosessed();
+
+            possessedCorpses[defeated_count++] = other->clone();
+        }
     }
 };
