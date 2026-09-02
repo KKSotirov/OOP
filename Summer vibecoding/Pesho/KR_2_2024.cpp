@@ -10,6 +10,26 @@ enum class WeaponType
     Axe
 };
 
+void printWeaponType(WeaponType _weapon)
+{
+    switch (_weapon)
+    {
+    case WeaponType::Sword:
+        std::cout << "Wielding a Sword! \n";
+        break;
+    case WeaponType::Wand:
+        std::cout << "Wielding a Wand! \n";
+        break;
+    case WeaponType::Staff:
+        std::cout << "Wielding a Staff! \n";
+        break;
+    default:
+        std::cout << "Wielding an Axe! \n";
+        break;
+    }
+    std::cout << "\n";
+}
+
 struct Position
 {
     int x;
@@ -60,14 +80,14 @@ public:
         setName(other.name);
     }
 
-    Player operator=(const Player &other)
-    {
-        if (this != &other)
-        {
-            setName(other.name);
-        }
-        return *this;
-    }
+    // Player operator=(const Player &other)
+    // {
+    //     if (this != &other)
+    //     {
+    //         setName(other.name);
+    //     }
+    //     return *this;
+    // }
 
     virtual ~Player()
     {
@@ -86,8 +106,51 @@ public:
         setterHelper(name, _name);
     }
 
+    unsigned getHp() const
+    {
+        return hp;
+    }
+
+    void setHp(const unsigned _hp)
+    {
+        hp = _hp;
+    }
+
+    void setAd(const unsigned _ad)
+    {
+        ad = _ad;
+    }
+
+    WeaponType getWeaponType() const
+    {
+        return weapon;
+    }
+
+    void setWeaponType(const WeaponType _weapon)
+    {
+        weapon = _weapon;
+    }
+
+    // Virtual functions
+    virtual Player *clone() const = 0;
+    virtual void printInfo() const
+    {
+        std::cout << "Player name: " << name
+                  << ", with hp = " << hp
+                  << ", attack damage = " << ad
+                  << "position on map (" << pos.x
+                  << "," << pos.y << ") and ";
+        printWeaponType(weapon);
+        std::cout << "\n";
+    }
+
+    virtual unsigned getAd() const
+    {
+        return ad;
+    }
+
     // move, handle attack, attack, get attack power, print
-    bool move(const int targetX, const int targetY, const int moves)
+    virtual bool move(const int targetX, const int targetY, const int moves)
     {
         if (pos.x == targetX && pos.y == targetY)
         {
@@ -106,5 +169,23 @@ public:
             pos.y--;
 
         return move(targetX, targetY, moves + 1);
+    }
+
+    bool isDead() const
+    {
+        return hp == 0;
+    }
+
+    virtual void tankAttack(const unsigned dmg)
+    {
+        if (dmg >= hp)
+            hp = 0;
+        else
+            hp -= dmg;
+    }
+
+    virtual void dealDmg(Player *target)
+    {
+        target->tankAttack(this->getAd());
     }
 };
