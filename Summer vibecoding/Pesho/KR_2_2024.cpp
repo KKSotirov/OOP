@@ -236,3 +236,89 @@ public:
         }
     }
 };
+
+class Mage : public Player
+{
+private:
+    char *spell;
+    double poison;
+
+    void free()
+    {
+        delete[] spell;
+        spell = nullptr;
+    }
+
+    bool isValidPoison(const double _poison) const
+    {
+        return (_poison > 0) && (_poison < 1);
+    }
+
+public:
+    // RO3
+    Mage(const char *_name, const WeaponType _weapon, const Position _pos, const unsigned _ad, const unsigned _hp, const char *_spell, const double _poison) : Player(_name, _weapon, _pos, _ad, _hp), spell(nullptr)
+    {
+        poison = isValidPoison(_poison) ? _poison : 0.0;
+        setSpell(_spell);
+    }
+
+    Mage(const Mage &other) : Player(other), spell(nullptr), poison(other.poison)
+    {
+        setSpell(other.spell);
+    }
+
+    Mage &operator=(const Mage &other)
+    {
+        if (this != &other)
+        {
+            this->Player::operator=(other);
+            poison = other.getPoison();
+            setSpell(other.getSpell());
+        }
+        return *this;
+    }
+
+    ~Mage()
+    {
+        free();
+    }
+
+    // Getters + Setters
+    const char *getSpell() const
+    {
+        return spell;
+    }
+
+    void setSpell(const char *_spell)
+    {
+        setterHelper(spell, _spell);
+    }
+
+    double getPoison() const
+    {
+        return poison;
+    }
+
+    void setPoison(const double _poison)
+    {
+        poison = _poison;
+    }
+
+    // Virtual functions
+    Mage *clone() const override
+    {
+        return new Mage(*this);
+    }
+
+    void printInfo() const override
+    {
+        this->Player::printInfo();
+        std::cout << "Mage with unique spell  = " << spell << " and posion coefficient = " << poison << "\n";
+    }
+
+    void dealDmg(Player *other) override
+    {
+        other->setHp(other->getHp() * poison);
+        this->Player::dealDmg(other);
+    }
+};
