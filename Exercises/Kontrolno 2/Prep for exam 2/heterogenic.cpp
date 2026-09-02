@@ -193,7 +193,7 @@ public:
     {
         this->swap(other);
         return *this;
-    } // Bi li mi pokazal metoda na Armianov ako ti se zanimava
+    }
 
     ~Inventory()
     {
