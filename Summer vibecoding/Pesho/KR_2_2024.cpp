@@ -189,3 +189,50 @@ public:
         target->tankAttack(this->getAd());
     }
 };
+
+class Warrior : public Player
+{
+private:
+    unsigned armor;
+
+public:
+    // No RO3
+    Warrior(const char *_name, const WeaponType _weapon, const Position _pos, const unsigned _ad, const unsigned _hp, const unsigned _armor) : Player(_name, _weapon, _pos, _ad, _hp), armor(_armor) {}
+
+    Warrior(const Warrior &other) : Player(other), armor(other.armor) {}
+
+    // Getters + Setters
+    unsigned getArmor() const
+    {
+        return armor;
+    }
+
+    void setArmor(const unsigned _armor)
+    {
+        armor = _armor;
+    }
+
+    // Virtual functions
+    Warrior *clone() const override
+    {
+        return new Warrior(*this);
+    }
+
+    void printInfo() const override
+    {
+        this->Player::printInfo();
+        std::cout << "Warrior type with " << armor << " armor! \n";
+    }
+
+    void tankAttack(unsigned dmg) override
+    {
+        if (armor > dmg)
+            armor -= dmg;
+        else
+        {
+            armor = 0;
+            dmg -= armor;
+            this->Player::tankAttack(dmg);
+        }
+    }
+};
