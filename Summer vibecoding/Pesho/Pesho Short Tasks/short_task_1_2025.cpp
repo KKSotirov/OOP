@@ -59,7 +59,7 @@ public:
             setBrand(other.brand);
             setModel(other.model);
             freq = other.freq;
-            type = other.type;
+            // type = other.type;    type is const!
         }
         return *this;
     }
@@ -190,6 +190,7 @@ private:
                     lenCurrWord++;
                     ptr++;
                 }
+                tmp[lenCurrWord] = '\0';
                 if (strcmp(tmp, "min-calc") == 0)
                 {
                     delete[] tmp;
@@ -262,5 +263,100 @@ public:
             return minVal;
         }
         return 0;
+    }
+};
+
+class ComputingCenter
+{
+private:
+    CalculatingDevice **devices;
+    size_t capacity;
+    size_t count;
+
+    void free()
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            delete devices[i];
+        }
+        delete[] devices;
+    }
+
+    void resize()
+    {
+        if (capacity == 16)
+        {
+            std::cout << "Maximum size of container has been reached! \n";
+            return;
+        }
+        capacity *= 2;
+        CalculatingDevice **tmp = new CalculatingDevice *[capacity];
+        for (size_t i = 0; i < count; i++)
+        {
+            tmp[i] = devices[i];
+        }
+        delete[] devices;
+        devices = tmp;
+    }
+
+    void tighten(const size_t indexOfDeleted)
+    {
+        for (size_t i = indexOfDeleted; i < count - 1; i++)
+        {
+            devices[i] = devices[i + 1];
+        }
+        count--;
+    }
+
+public:
+    ComputingCenter() : capacity(2), count(0)
+    {
+        devices = new CalculatingDevice *[capacity];
+    }
+
+    ComputingCenter(const ComputingCenter &other) = delete;
+    ComputingCenter &operator=(const ComputingCenter &other) = delete;
+
+    ~ComputingCenter()
+    {
+        free();
+    }
+
+    bool addDevice(const CalculatingDevice *_device)
+    {
+        if (count >= capacity)
+            resize();
+        if (count >= capacity)
+            return false; // Resize didn't work ~~> we have reached our max container size
+
+        devices[count++] = _device->clone();
+        return true;
+    }
+
+    bool removeDevice(const char *_brand)
+    {
+        bool deletedASingleItem = false;
+        for (size_t i = 0; i < count; i++)
+        {
+            if (strcmp(devices[i]->getBrand(), _brand) == 0)
+            {
+                // we delete this phone
+                delete devices[i];
+                tighten(i);
+                i--;
+                deletedASingleItem = true;
+            }
+        }
+        return deletedASingleItem;
+    }
+
+    void compute(const unsigned *arr) const
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            std::cout << " Device " << devices[i]->getBrand()
+                      << ", model " << devices[i]->getModel()
+                      << " has compute = " << devices[i]->compute(arr) << "\n";
+        }
     }
 };
