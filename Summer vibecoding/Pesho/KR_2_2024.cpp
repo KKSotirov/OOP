@@ -80,14 +80,18 @@ public:
         setName(other.name);
     }
 
-    // Player operator=(const Player &other)
-    // {
-    //     if (this != &other)
-    //     {
-    //         setName(other.name);
-    //     }
-    //     return *this;
-    // }
+    Player &operator=(const Player &other)
+    {
+        if (this != &other)
+        {
+            setName(other.name);
+            weapon = other.weapon;
+            pos = other.pos;
+            hp = other.hp;
+            ad = other.ad;
+        }
+        return *this;
+    }
 
     virtual ~Player()
     {
@@ -230,8 +234,8 @@ public:
             armor -= dmg;
         else
         {
-            armor = 0;
             dmg -= armor;
+            armor = 0;
             this->Player::tankAttack(dmg);
         }
     }
@@ -356,7 +360,7 @@ private:
     {
         defeated_count = other.defeated_count;
         defeated_capacity = other.defeated_capacity;
-        Player **possessedCorpses = new Player *[defeated_capacity];
+        possessedCorpses = new Player *[defeated_capacity];
         for (size_t i = 0; i < defeated_count; i++)
         {
             possessedCorpses[i] = other.possessedCorpses[i]->clone();
@@ -378,6 +382,7 @@ public:
     {
         if (this != &other)
         {
+            freeNecromancer();
             copyNecro(other);
             this->Mage::operator=(other);
         }
@@ -420,5 +425,94 @@ public:
 
             possessedCorpses[defeated_count++] = other->clone();
         }
+    }
+};
+
+class PlayerCollection
+{
+private:
+    Player **players;
+    size_t capacity;
+    size_t count;
+
+    void freeCollection()
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            delete players[i];
+        }
+        delete[] players;
+    }
+
+    void resize()
+    {
+        capacity *= 2;
+        Player **tmp = new Player *[capacity];
+        for (size_t i = 0; i < count; i++)
+        {
+            tmp[i] = players[i];
+        }
+        delete[] players;
+        players = tmp;
+    }
+
+    bool isUnique(const Player *_player)
+    {
+        for (size_t i = 0; i < count; i++)
+        {
+            if (strcmp(players[i]->getName(), _player->getName()) == 0)
+                return false;
+        }
+        return true;
+    }
+
+public:
+    PlayerCollection() : capacity(2), count(0)
+    {
+        players = new Player *[capacity];
+    }
+
+    bool addPlayer(const Player *_player)
+    {
+        if (count >= capacity)
+            resize();
+
+        if (isUnique(_player))
+        {
+            players[count++] = _player->clone();
+            std::cout << "Added player " << _player->getName() << " successfully! \n";
+            return true;
+        }
+
+        std::cout << "Could not add player " << _player->getName() << "! \n";
+        return false;
+    }
+
+    const Player *getPlayer(const int indexInCollection) const
+    {
+        return players[indexInCollection];
+    }
+
+    size_t getCount() const
+    {
+        return count;
+    }
+
+    bool removePlayer(const char *_name)
+    {
+        int indexOfRemoved = -1;
+
+        for (size_t i = 0; i < count; i++)
+        {
+            if (strcmp(_name, players[i]->getName()) == 0)
+            {
+                delete players[i];
+            }
+        }
+        if (indexOfRemoved == -1)
+            return false;
+
+        players[indexOfRemoved] = players[--count];
+        return true;
     }
 };
