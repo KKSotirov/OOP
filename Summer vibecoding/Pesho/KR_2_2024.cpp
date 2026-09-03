@@ -39,7 +39,8 @@ struct Position
     {
         int dx = abs(x - other.x);
         int dy = abs(y - other.y);
-        return (dx == 1) && (dy == 1);
+        return ((dx == 1) && (dy == 1)) || ((dx == 0) && (dy == 1)) || ((dx == 1) && (dy == 0));
+        //          DIAGONALLY ADJ               VERTICALY ADJ                HORIZONTALY ADJ
     }
 };
 
@@ -506,6 +507,7 @@ public:
         {
             if (strcmp(_name, players[i]->getName()) == 0)
             {
+                indexOfRemoved = i;
                 delete players[i];
             }
         }
@@ -514,5 +516,10 @@ public:
 
         players[indexOfRemoved] = players[--count];
         return true;
+    }
+
+    ~PlayerCollection()
+    {
+        freeCollection();
     }
 };
