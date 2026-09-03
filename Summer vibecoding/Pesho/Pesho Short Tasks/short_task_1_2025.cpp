@@ -175,6 +175,9 @@ private:
 
     bool hasMin_Calc() const
     {
+        if (sensors == nullptr)
+            return false;
+
         const char *ptr = sensors;
         char *tmp = new char[strlen(sensors) + 1];
         int lenCurrWord = 0;
@@ -199,7 +202,8 @@ private:
                 }
                 lenCurrWord = 0;
             }
-            ptr++;
+            else
+                ptr++;
         }
         delete[] tmp;
         tmp = nullptr;
