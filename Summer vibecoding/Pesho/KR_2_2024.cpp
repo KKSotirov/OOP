@@ -7,7 +7,11 @@ enum class WeaponType
     Sword,
     Wand,
     Staff,
-    Axe
+    Axe,
+    Soft_Stick,
+    Gamblers_Blade,
+    Good_Goy_Propaganda,
+    Mercedes_AMG_GT63_Pro
 };
 
 void printWeaponType(WeaponType _weapon)
@@ -22,6 +26,18 @@ void printWeaponType(WeaponType _weapon)
         break;
     case WeaponType::Staff:
         std::cout << "Wielding a Staff! \n";
+        break;
+    case WeaponType::Gamblers_Blade:
+        std::cout << "Wielding a GAMBA BLADE! \n";
+        break;
+    case WeaponType::Soft_Stick:
+        std::cout << "Wielding a Soft Stick! \n";
+        break;
+    case WeaponType::Good_Goy_Propaganda:
+        std::cout << "This individual is so cooked \n";
+        break;
+    case WeaponType::Mercedes_AMG_GT63_Pro:
+        std::cout << "Cruising at 300km/h in a Mercedes \n";
         break;
     default:
         std::cout << "Wielding an Axe! \n";
@@ -288,6 +304,15 @@ public:
         free();
     }
 
+    void gambleBIG()
+    {
+        if (this->getWeaponType() == WeaponType::Gamblers_Blade)
+        {
+            std::cout << "You have hit a fortune shard! \n";
+            this->setHp(this->getHp() * 10);
+        }
+    }
+
     // Getters + Setters
     const char *getSpell() const
     {
@@ -518,8 +543,67 @@ public:
         return true;
     }
 
+    void traikovShowLoveForTheEX(const Player *_player)
+    {
+        if (strcmp(_player->getName(), "Traikov The Forever Loyal To His EX") == 0)
+        {
+            for (size_t i = 0; i < count; i++)
+            {
+                if (strcmp(players[i]->getName(), "Traikov The Forever Loyal To His EX") != 0)
+                    players[i]->setHp(0);
+                removePlayer(players[i]->getName());
+                i--;
+            }
+        }
+    }
+
+    PlayerCollection(const PlayerCollection &other) = delete;
+    PlayerCollection &operator=(const PlayerCollection &other) = delete;
+
     ~PlayerCollection()
     {
         freeCollection();
     }
 };
+
+int main()
+{
+    Warrior Zhivaka("Zhivaka The Brainwashed ZhultoPavetnik/Evrogei", WeaponType::Good_Goy_Propaganda, {100, 34}, 50, 3000, 5000);
+    Warrior Ivan("Ivan The Unable To Get It Up", WeaponType::Soft_Stick, {0, 0}, 500, 100000, 50);
+
+    Mage Nio("Nio The Gambling Arcanist", WeaponType::Gamblers_Blade, {10, 5}, 2000, 2500, "JackPot!", 0.4);
+    Mage Alex("Alex The SleepDeprived Magus", WeaponType::Gamblers_Blade, {10, 6}, 5000, 10, "InstaKill", 0.01);
+
+    Necromancer Koko("Koko The Schizophrenic Mind Shatterer", WeaponType::Gamblers_Blade, {10, 10}, 10000, 10000, "MindControl", 0.00001);
+    Necromancer Merca("Traikov The Forever Loyal To His EX", WeaponType::Mercedes_AMG_GT63_Pro, {10000, 10000}, 10000, 100000, "Painful cry of Love for the EX ~> One shots every Player who is NOT the EX", 0.5);
+
+    PlayerCollection dzone;
+    dzone.addPlayer(&Zhivaka);
+    dzone.addPlayer(&Ivan);
+    dzone.addPlayer(&Nio);
+    dzone.addPlayer(&Alex);
+    dzone.addPlayer(&Koko);
+    dzone.addPlayer(&Merca);
+
+    std::cout << " There are " << dzone.getCount() << " number of players! \n";
+
+    // Let the Battles Commence
+    Zhivaka.dealDmg(&Ivan);
+    Ivan.dealDmg(&Zhivaka);
+
+    Merca.move(0, 0, 0);
+
+    Nio.gambleBIG();
+    Alex.dealDmg(&Nio);
+    Nio.gambleBIG();
+    Koko.dealDmg(&Alex);
+    Nio.dealDmg(&Koko);
+    Koko.dealDmg(&Nio);
+
+    Merca.dealDmg(&Zhivaka);
+    Ivan.dealDmg(&Koko);
+    Koko.dealDmg(&Ivan);
+    dzone.traikovShowLoveForTheEX(&Merca);
+
+    return 0;
+}
