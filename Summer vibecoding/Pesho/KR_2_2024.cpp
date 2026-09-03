@@ -10,7 +10,7 @@ enum class WeaponType
     Axe,
     Soft_Stick,
     Gamblers_Blade,
-    Good_Goy_Propaganda,
+    Propaganda,
     Mercedes_AMG_GT63_Pro
 };
 
@@ -33,7 +33,7 @@ void printWeaponType(WeaponType _weapon)
     case WeaponType::Soft_Stick:
         std::cout << "Wielding a Soft Stick! \n";
         break;
-    case WeaponType::Good_Goy_Propaganda:
+    case WeaponType::Propaganda:
         std::cout << "This individual is so cooked \n";
         break;
     case WeaponType::Mercedes_AMG_GT63_Pro:
@@ -568,8 +568,8 @@ public:
 
 int main()
 {
-    Warrior Zhivaka("Zhivaka The Brainwashed ZhultoPavetnik/Evrogei", WeaponType::Good_Goy_Propaganda, {100, 34}, 50, 3000, 5000);
-    Warrior Ivan("Ivan The Unable To Get It Up", WeaponType::Soft_Stick, {0, 0}, 500, 100000, 50);
+    Warrior Zhivaka("Zhivaka The Brainwashed", WeaponType::Propaganda, {100, 34}, 50, 3000, 5000);
+    Warrior Ivan("Ivan The Grinder", WeaponType::Soft_Stick, {0, 0}, 500, 100000, 50);
 
     Mage Nio("Nio The Gambling Arcanist", WeaponType::Gamblers_Blade, {10, 5}, 2000, 2500, "JackPot!", 0.4);
     Mage Alex("Alex The SleepDeprived Magus", WeaponType::Gamblers_Blade, {10, 6}, 5000, 10, "InstaKill", 0.01);
