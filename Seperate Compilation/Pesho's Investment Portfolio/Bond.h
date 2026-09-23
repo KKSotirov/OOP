@@ -14,9 +14,9 @@ public:
     Bond();
     Bond(const char *_ticker, const double _nominalValue, const double _couponRate, const char *_issuer);
     Bond(const Bond &other);
-    Bond(Bond &&other);
+    Bond(Bond &&other) noexcept;
     Bond &operator=(const Bond &other);
-    Bond &operator=(Bond &&other);
+    Bond &operator=(Bond &&other) noexcept;
     ~Bond() override;
 
     // Getters + Setters

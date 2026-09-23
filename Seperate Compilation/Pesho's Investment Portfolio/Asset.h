@@ -7,7 +7,7 @@ private:
 
     void free();
 
-private:
+protected:
     void setterHelper(char *&dest, const char *src);
 
 public:
