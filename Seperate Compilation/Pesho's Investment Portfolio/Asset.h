@@ -6,6 +6,8 @@ private:
     char *ticker;
 
     void free();
+
+private:
     void setterHelper(char *&dest, const char *src);
 
 public:
