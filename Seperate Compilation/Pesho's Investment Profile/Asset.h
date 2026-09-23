@@ -23,6 +23,6 @@ public:
 
     // Virtual functions
     virtual double getMarketValue() const = 0;
-    virtual void print() const = 0;
+    virtual void printInfo() const = 0;
     virtual Asset *clone() const = 0;
 };
