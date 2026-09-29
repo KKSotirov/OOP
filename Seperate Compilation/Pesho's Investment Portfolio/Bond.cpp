@@ -15,7 +15,7 @@ Bond::Bond(const char *_ticker, const double _nominalValue, const double _coupon
     setIssuer(_issuer);
 }
 
-Bond::Bond(const Bond &other) : Asset(other), nominalValue(other.nominalValue), couponRate(other.couponRate)
+Bond::Bond(const Bond &other) : Asset(other), nominalValue(other.nominalValue), couponRate(other.couponRate), issuer(nullptr)
 {
     setIssuer(other.issuer);
 }

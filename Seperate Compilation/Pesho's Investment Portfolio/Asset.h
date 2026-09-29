@@ -15,7 +15,7 @@ public:
     Asset(const char *_ticker);
     Asset(const Asset &other);
     Asset &operator=(const Asset &other);
-    Asset(Asset &&other);
+    Asset(Asset &&other) noexcept;
     Asset &operator=(Asset &&other) noexcept;
     virtual ~Asset();
 
